@@ -3,6 +3,25 @@ spring:
     name: growth-profile
   profiles:
     active: local
+  datasource:
+    url: jdbc:mysql://localhost:3306/growth_profile?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
 server:
-  port: 8080
+  port: 8082
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+hbase:
+  zookeeper:
+    quorum: localhost
+    port: 2181
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
