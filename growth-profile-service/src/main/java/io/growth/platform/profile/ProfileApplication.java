@@ -4,9 +4,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class uprofileApplication {
+public class ProfileApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(uprofileApplication.class, args);
+        SpringApplication.run(ProfileApplication.class, args);
     }
 }
