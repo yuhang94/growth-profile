@@ -1,14 +1,14 @@
 package io.growth.platform.profile.infrastructure.persistence.repository;
 
 import io.growth.platform.profile.api.enums.TagType;
-import io.growth.platform.profile.config.MyBatisPlusConfig;
 import io.growth.platform.profile.domain.model.TagDefinition;
-import io.growth.platform.profile.infrastructure.persistence.mapper.TagDefinitionMapper;
+import org.apache.hadoop.hbase.client.Connection;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.test.context.ActiveProfiles;
@@ -19,7 +19,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
@@ -27,14 +26,13 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Testcontainers
-@SpringBootTest(classes = {
-        MyBatisPlusConfig.class,
-        TagDefinitionMapper.class,
-        TagDefinitionRepositoryImpl.class
-})
+@SpringBootTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("it")
 class TagDefinitionRepositoryImplIT {
+
+    @MockBean
+    Connection hbaseConnection;
 
     @Container
     static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
@@ -51,7 +49,7 @@ class TagDefinitionRepositoryImplIT {
 
     @BeforeAll
     static void initSchema(@Autowired DataSource dataSource) throws SQLException {
-        try (Connection conn = dataSource.getConnection()) {
+        try (java.sql.Connection conn = dataSource.getConnection()) {
             ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/schema.sql"));
         }
     }
