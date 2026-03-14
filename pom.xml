@@ -18,6 +18,17 @@
 
     <name>GrowthPlatform Profile Service</name>
 
+    <repositories>
+        <repository>
+            <id>github-bom</id>
+            <url>https://maven.pkg.github.com/yuhang94/growth-platform-bom</url>
+        </repository>
+        <repository>
+            <id>github-common</id>
+            <url>https://maven.pkg.github.com/yuhang94/growth-common</url>
+        </repository>
+    </repositories>
+
     <modules>
         <module>growth-profile-api</module>
         <module>growth-profile-service</module>

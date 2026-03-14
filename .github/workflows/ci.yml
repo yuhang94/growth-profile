@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   build:
@@ -22,19 +23,35 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+          server-id: github-bom
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
 
-      - name: Install growth-platform-bom
+      - name: Configure GitHub Packages for common
         run: |
-          git clone --depth 1 https://github.com/yuhang94/growth-platform-bom.git /tmp/growth-platform-bom
-          mvn -f /tmp/growth-platform-bom/pom.xml install -B -q
-
-      - name: Install growth-common
-        run: |
-          git clone --depth 1 https://github.com/yuhang94/growth-common.git /tmp/growth-common
-          mvn -f /tmp/growth-common/pom.xml install -B -q -DskipTests
+          # setup-java only writes one server, add the second one
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <settings>
+            <servers>
+              <server>
+                <id>github-bom</id>
+                <username>${env.GITHUB_ACTOR}</username>
+                <password>${env.GITHUB_TOKEN}</password>
+              </server>
+              <server>
+                <id>github-common</id>
+                <username>${env.GITHUB_ACTOR}</username>
+                <password>${env.GITHUB_TOKEN}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
 
       - name: Build and Unit Test
         run: mvn clean verify -B
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Test Reports
         if: failure()
@@ -58,18 +75,30 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Install growth-platform-bom
+      - name: Configure GitHub Packages
         run: |
-          git clone --depth 1 https://github.com/yuhang94/growth-platform-bom.git /tmp/growth-platform-bom
-          mvn -f /tmp/growth-platform-bom/pom.xml install -B -q
-
-      - name: Install growth-common
-        run: |
-          git clone --depth 1 https://github.com/yuhang94/growth-common.git /tmp/growth-common
-          mvn -f /tmp/growth-common/pom.xml install -B -q -DskipTests
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <settings>
+            <servers>
+              <server>
+                <id>github-bom</id>
+                <username>${env.GITHUB_ACTOR}</username>
+                <password>${env.GITHUB_TOKEN}</password>
+              </server>
+              <server>
+                <id>github-common</id>
+                <username>${env.GITHUB_ACTOR}</username>
+                <password>${env.GITHUB_TOKEN}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
 
       - name: Integration Test
         run: mvn clean verify -B -Pit -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Failsafe Reports
         if: always()
