@@ -7,7 +7,8 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 jobs:
   build:
@@ -23,18 +24,8 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Install growth-platform-bom
-        run: |
-          git clone --depth 1 https://github.com/yuhang94/growth-platform-bom.git /tmp/growth-platform-bom
-          mvn -f /tmp/growth-platform-bom/pom.xml install -B -q
-
-      - name: Install growth-common
-        run: |
-          git clone --depth 1 https://github.com/yuhang94/growth-common.git /tmp/growth-common
-          mvn -f /tmp/growth-common/pom.xml install -B -q -DskipTests
-
       - name: Build and Unit Test
-        run: mvn clean verify -B
+        run: mvn clean verify -B -U
 
       - name: Upload Test Reports
         if: failure()
@@ -43,6 +34,16 @@ jobs:
           name: surefire-reports
           path: '**/target/surefire-reports/'
           retention-days: 7
+
+  auto-merge:
+    if: github.event_name == 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge
+        run: gh pr merge ${{ github.event.pull_request.number }} --auto --squash --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   integration-test:
     runs-on: ubuntu-latest
@@ -58,18 +59,8 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Install growth-platform-bom
-        run: |
-          git clone --depth 1 https://github.com/yuhang94/growth-platform-bom.git /tmp/growth-platform-bom
-          mvn -f /tmp/growth-platform-bom/pom.xml install -B -q
-
-      - name: Install growth-common
-        run: |
-          git clone --depth 1 https://github.com/yuhang94/growth-common.git /tmp/growth-common
-          mvn -f /tmp/growth-common/pom.xml install -B -q -DskipTests
-
       - name: Integration Test
-        run: mvn clean verify -B -Pit -DskipTests
+        run: mvn clean verify -B -U -Pit -DskipTests
 
       - name: Upload Failsafe Reports
         if: always()
