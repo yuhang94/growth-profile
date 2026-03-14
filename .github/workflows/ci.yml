@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  packages: read
 
 jobs:
   build:
@@ -23,35 +22,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-          server-id: github-bom
-          server-username: GITHUB_ACTOR
-          server-password: GITHUB_TOKEN
-
-      - name: Configure GitHub Packages for common
-        run: |
-          # setup-java only writes one server, add the second one
-          mkdir -p ~/.m2
-          cat > ~/.m2/settings.xml << 'EOF'
-          <settings>
-            <servers>
-              <server>
-                <id>github-bom</id>
-                <username>${env.GITHUB_ACTOR}</username>
-                <password>${env.GITHUB_TOKEN}</password>
-              </server>
-              <server>
-                <id>github-common</id>
-                <username>${env.GITHUB_ACTOR}</username>
-                <password>${env.GITHUB_TOKEN}</password>
-              </server>
-            </servers>
-          </settings>
-          EOF
 
       - name: Build and Unit Test
         run: mvn clean verify -B
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Test Reports
         if: failure()
@@ -75,30 +48,8 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Configure GitHub Packages
-        run: |
-          mkdir -p ~/.m2
-          cat > ~/.m2/settings.xml << 'EOF'
-          <settings>
-            <servers>
-              <server>
-                <id>github-bom</id>
-                <username>${env.GITHUB_ACTOR}</username>
-                <password>${env.GITHUB_TOKEN}</password>
-              </server>
-              <server>
-                <id>github-common</id>
-                <username>${env.GITHUB_ACTOR}</username>
-                <password>${env.GITHUB_TOKEN}</password>
-              </server>
-            </servers>
-          </settings>
-          EOF
-
       - name: Integration Test
         run: mvn clean verify -B -Pit -DskipTests
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Failsafe Reports
         if: always()
