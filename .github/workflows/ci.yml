@@ -24,7 +24,7 @@ jobs:
           cache: maven
 
       - name: Build and Unit Test
-        run: mvn clean verify -B
+        run: mvn clean verify -B -U
 
       - name: Upload Test Reports
         if: failure()
@@ -49,7 +49,7 @@ jobs:
           cache: maven
 
       - name: Integration Test
-        run: mvn clean verify -B -Pit -DskipTests
+        run: mvn clean verify -B -U -Pit -DskipTests
 
       - name: Upload Failsafe Reports
         if: always()
