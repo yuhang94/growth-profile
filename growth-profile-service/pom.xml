@@ -20,7 +20,7 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.github.yuhang94</groupId>
+            <groupId>io.github.yuhang94.growth-common</groupId>
             <artifactId>growth-common-core</artifactId>
         </dependency>
         <dependency>
