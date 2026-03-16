@@ -61,6 +61,10 @@ public class HBaseTemplate {
         }
     }
 
+    public Connection getConnection() {
+        return connection;
+    }
+
     public void delete(String tableName, String rowKey, String family, String qualifier) throws IOException {
         try (Table table = connection.getTable(TableName.valueOf(tableName))) {
             Delete delete = new Delete(Bytes.toBytes(rowKey));
