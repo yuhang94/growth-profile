@@ -25,7 +25,7 @@ jobs:
           cache: maven
 
       - name: Build and Unit Test
-        run: mvn clean verify -B -U
+        run: mvn clean test -B -U
 
       - name: Upload Test Reports
         if: failure()
