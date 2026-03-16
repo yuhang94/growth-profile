@@ -25,8 +25,9 @@ public class MyBatisPlusConfig {
         return new MetaObjectHandler() {
             @Override
             public void insertFill(MetaObject metaObject) {
-                this.strictInsertFill(metaObject, "createdTime", LocalDateTime.class, LocalDateTime.now());
-                this.strictInsertFill(metaObject, "updatedTime", LocalDateTime.class, LocalDateTime.now());
+                LocalDateTime now = LocalDateTime.now();
+                this.strictInsertFill(metaObject, "createdTime", LocalDateTime.class, now);
+                this.strictInsertFill(metaObject, "updatedTime", LocalDateTime.class, now);
             }
 
             @Override

@@ -19,7 +19,7 @@ mybatis-plus:
 
 hbase:
   zookeeper:
-    quorum: localhost
+    quorum: 47.111.23.147
     port: 2181
 
 rocketmq:

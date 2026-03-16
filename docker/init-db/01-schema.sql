@@ -1,3 +1,8 @@
+-- growth_profile 数据库初始化脚本
+-- 容器首次启动时自动执行
+
+USE growth_profile;
+
 CREATE TABLE IF NOT EXISTS `gp_profile_tag_definition` (
     `id`           BIGINT       NOT NULL AUTO_INCREMENT,
     `tag_key`      VARCHAR(128) NOT NULL COMMENT '标签键',

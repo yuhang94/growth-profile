@@ -11,12 +11,19 @@
         <relativePath/>
     </parent>
 
-    <groupId>io.github.growth-platform</groupId>
+    <groupId>io.github.yuhang94</groupId>
     <artifactId>growth-profile</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>GrowthPlatform Profile Service</name>
+
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <modules>
         <module>growth-profile-api</module>
@@ -27,14 +34,14 @@
         <java.version>21</java.version>
         <lombok.version>1.18.40</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
-        <growth-platform-bom.version>0.1.0-SNAPSHOT</growth-platform-bom.version>
+        <growth-platform-bom.version>main-SNAPSHOT</growth-platform-bom.version>
         <testcontainers.version>1.20.4</testcontainers.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>io.github.growth-platform</groupId>
+                <groupId>io.github.yuhang94</groupId>
                 <artifactId>growth-platform-bom</artifactId>
                 <version>${growth-platform-bom.version}</version>
                 <type>pom</type>
