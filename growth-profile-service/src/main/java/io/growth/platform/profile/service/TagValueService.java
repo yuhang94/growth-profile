@@ -4,9 +4,11 @@ import io.growth.platform.common.core.exception.BizException;
 import io.growth.platform.common.core.exception.CommonErrorCode;
 import io.growth.platform.profile.api.dto.*;
 import io.growth.platform.profile.converter.TagValueDTOConverter;
+import io.growth.platform.profile.domain.event.TagValueChanged;
 import io.growth.platform.profile.domain.model.TagValue;
 import io.growth.platform.profile.domain.repository.TagDefinitionRepository;
 import io.growth.platform.profile.domain.repository.TagValueRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,23 +19,35 @@ public class TagValueService {
 
     private final TagValueRepository tagValueRepository;
     private final TagDefinitionRepository tagDefinitionRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final TagValueDTOConverter converter = TagValueDTOConverter.INSTANCE;
 
-    public TagValueService(TagValueRepository tagValueRepository, TagDefinitionRepository tagDefinitionRepository) {
+    public TagValueService(TagValueRepository tagValueRepository,
+                           TagDefinitionRepository tagDefinitionRepository,
+                           ApplicationEventPublisher eventPublisher) {
         this.tagValueRepository = tagValueRepository;
         this.tagDefinitionRepository = tagDefinitionRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public void write(TagValueWriteRequest request) {
         validateTagKey(request.getTagKey());
         TagValue tagValue = converter.toDomain(request);
         tagValueRepository.put(tagValue);
+        eventPublisher.publishEvent(new TagValueChanged(this,
+                request.getUserId(), request.getTagKey(), request.getTagValue(),
+                TagValueChanged.ChangeType.PUT));
     }
 
     public void batchWrite(TagValueBatchWriteRequest request) {
         request.getItems().forEach(item -> validateTagKey(item.getTagKey()));
         List<TagValue> tagValues = request.getItems().stream().map(converter::toDomain).toList();
         tagValueRepository.putBatch(tagValues);
+        for (TagValueWriteRequest item : request.getItems()) {
+            eventPublisher.publishEvent(new TagValueChanged(this,
+                    item.getUserId(), item.getTagKey(), item.getTagValue(),
+                    TagValueChanged.ChangeType.PUT));
+        }
     }
 
     public TagValueDTO getTagValue(String userId, String tagKey) {
@@ -54,6 +68,8 @@ public class TagValueService {
 
     public void delete(String userId, String tagKey) {
         tagValueRepository.delete(userId, tagKey);
+        eventPublisher.publishEvent(new TagValueChanged(this,
+                userId, tagKey, null, TagValueChanged.ChangeType.DELETE));
     }
 
     private void validateTagKey(String tagKey) {

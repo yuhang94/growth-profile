@@ -7,8 +7,10 @@ import io.growth.platform.profile.api.dto.TagDefinitionCreateRequest;
 import io.growth.platform.profile.api.dto.TagDefinitionDTO;
 import io.growth.platform.profile.api.dto.TagDefinitionUpdateRequest;
 import io.growth.platform.profile.converter.TagDefinitionDTOConverter;
+import io.growth.platform.profile.domain.event.TagDefinitionChanged;
 import io.growth.platform.profile.domain.model.TagDefinition;
 import io.growth.platform.profile.domain.repository.TagDefinitionRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,10 +19,13 @@ import java.util.List;
 public class TagDefinitionService {
 
     private final TagDefinitionRepository tagDefinitionRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final TagDefinitionDTOConverter converter = TagDefinitionDTOConverter.INSTANCE;
 
-    public TagDefinitionService(TagDefinitionRepository tagDefinitionRepository) {
+    public TagDefinitionService(TagDefinitionRepository tagDefinitionRepository,
+                                ApplicationEventPublisher eventPublisher) {
         this.tagDefinitionRepository = tagDefinitionRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public TagDefinitionDTO create(TagDefinitionCreateRequest request) {
@@ -30,6 +35,8 @@ public class TagDefinitionService {
         TagDefinition domain = converter.toDomain(request);
         domain.setStatus(1);
         tagDefinitionRepository.insert(domain);
+        eventPublisher.publishEvent(new TagDefinitionChanged(this,
+                domain.getId(), domain.getTagKey(), TagDefinitionChanged.ChangeType.CREATED));
         return converter.toDTO(domain);
     }
 
@@ -38,6 +45,8 @@ public class TagDefinitionService {
                 .orElseThrow(() -> new BizException(CommonErrorCode.NOT_FOUND, "标签定义不存在: " + tagKey));
         converter.updateDomain(request, domain);
         tagDefinitionRepository.update(domain);
+        eventPublisher.publishEvent(new TagDefinitionChanged(this,
+                domain.getId(), domain.getTagKey(), TagDefinitionChanged.ChangeType.UPDATED));
         return converter.toDTO(domain);
     }
 
@@ -59,5 +68,7 @@ public class TagDefinitionService {
                 .orElseThrow(() -> new BizException(CommonErrorCode.NOT_FOUND, "标签定义不存在: " + tagKey));
         domain.setStatus(status);
         tagDefinitionRepository.update(domain);
+        eventPublisher.publishEvent(new TagDefinitionChanged(this,
+                domain.getId(), domain.getTagKey(), TagDefinitionChanged.ChangeType.STATUS_CHANGED));
     }
 }

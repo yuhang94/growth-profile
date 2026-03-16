@@ -22,6 +22,22 @@ hbase:
     quorum: localhost
     port: 2181
 
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: profile-producer-group
+    send-message-timeout: 3000
+
+clickhouse:
+  url: jdbc:ch://localhost:8123/default
+  username: default
+  password: ""
+
+sync:
+  hbase-to-clickhouse:
+    cron: "0 0 2 * * ?"
+    batch-size: 5000
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

@@ -28,6 +28,7 @@
         <lombok.version>1.18.40</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <growth-platform-bom.version>0.1.0-SNAPSHOT</growth-platform-bom.version>
+        <testcontainers.version>1.20.4</testcontainers.version>
     </properties>
 
     <dependencyManagement>
@@ -36,6 +37,13 @@
                 <groupId>io.github.growth-platform</groupId>
                 <artifactId>growth-platform-bom</artifactId>
                 <version>${growth-platform-bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
