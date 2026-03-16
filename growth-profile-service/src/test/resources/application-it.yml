@@ -1,8 +1,5 @@
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/test
-    username: test
-    password: test
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis-plus:
@@ -14,3 +11,9 @@ hbase:
   zookeeper:
     quorum: localhost
     port: 2181
+
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: profile-producer-group
+    send-message-timeout: 3000

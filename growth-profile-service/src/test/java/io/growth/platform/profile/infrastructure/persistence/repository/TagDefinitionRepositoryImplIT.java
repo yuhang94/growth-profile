@@ -1,132 +1,95 @@
 package io.growth.platform.profile.infrastructure.persistence.repository;
 
+import io.growth.platform.profile.BaseMyBatisTest;
 import io.growth.platform.profile.api.enums.TagType;
 import io.growth.platform.profile.domain.model.TagDefinition;
-import org.apache.hadoop.hbase.client.Connection;
-import org.junit.jupiter.api.BeforeAll;
+import io.growth.platform.profile.domain.repository.TagDefinitionRepository;
+import io.growth.platform.profile.infrastructure.persistence.mapper.TagDefinitionMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-import javax.sql.DataSource;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@Testcontainers
-@SpringBootTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ActiveProfiles("it")
-class TagDefinitionRepositoryImplIT {
-
-    @MockBean
-    Connection hbaseConnection;
-
-    @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
-            .withDatabaseName("growth_profile_test")
-            .withUsername("test")
-            .withPassword("test");
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", mysql::getJdbcUrl);
-        registry.add("spring.datasource.username", mysql::getUsername);
-        registry.add("spring.datasource.password", mysql::getPassword);
-    }
-
-    @BeforeAll
-    static void initSchema(@Autowired DataSource dataSource) throws SQLException {
-        try (java.sql.Connection conn = dataSource.getConnection()) {
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/schema.sql"));
-        }
-    }
+class TagDefinitionRepositoryImplIT extends BaseMyBatisTest {
 
     @Autowired
-    private TagDefinitionRepositoryImpl repository;
+    private TagDefinitionRepository repository;
+
+    @Autowired
+    private TagDefinitionMapper mapper;
+
+    @BeforeEach
+    void cleanUp() {
+        mapper.delete(null);
+    }
 
     @Test
-    void insert_and_findByTagKey() {
-        TagDefinition tag = buildTag("user_level", "用户等级", TagType.ENUM, "user");
-        tag.setEnumValues(List.of("GOLD", "SILVER", "BRONZE"));
+    void insertAndFindByTagKey() {
+        TagDefinition td = newTagDefinition("age", "年龄", TagType.LONG, "基础属性");
 
-        repository.insert(tag);
-        assertNotNull(tag.getId());
+        repository.insert(td);
 
-        Optional<TagDefinition> found = repository.findByTagKey("user_level");
+        assertNotNull(td.getId());
+        Optional<TagDefinition> found = repository.findByTagKey("age");
         assertTrue(found.isPresent());
-        assertEquals("用户等级", found.get().getTagName());
-        assertEquals(TagType.ENUM, found.get().getTagType());
-        assertEquals(List.of("GOLD", "SILVER", "BRONZE"), found.get().getEnumValues());
+        assertEquals("年龄", found.get().getTagName());
+        assertEquals(TagType.LONG, found.get().getTagType());
+        assertEquals("基础属性", found.get().getCategory());
     }
 
     @Test
-    void update_modifiesFields() {
-        TagDefinition tag = buildTag("user_age", "用户年龄", TagType.LONG, "user");
-        repository.insert(tag);
+    void update() {
+        TagDefinition td = newTagDefinition("gender", "性别", TagType.ENUM, "基础属性");
+        repository.insert(td);
 
-        tag.setTagName("用户年龄段");
-        tag.setDescription("年龄段分类");
-        repository.update(tag);
+        td.setTagName("用户性别");
+        td.setDescription("用户的性别");
+        repository.update(td);
 
-        Optional<TagDefinition> updated = repository.findByTagKey("user_age");
-        assertTrue(updated.isPresent());
-        assertEquals("用户年龄段", updated.get().getTagName());
-        assertEquals("年龄段分类", updated.get().getDescription());
-    }
-
-    @Test
-    void findByCategory_withPagination() {
-        for (int i = 0; i < 5; i++) {
-            repository.insert(buildTag("page_tag_" + i, "分页标签" + i, TagType.STRING, "page_test"));
-        }
-
-        List<TagDefinition> page1 = repository.findByCategory("page_test", 1, 3);
-        assertEquals(3, page1.size());
-
-        List<TagDefinition> page2 = repository.findByCategory("page_test", 2, 3);
-        assertEquals(2, page2.size());
-    }
-
-    @Test
-    void countByCategory() {
-        String category = "count_test";
-        for (int i = 0; i < 3; i++) {
-            repository.insert(buildTag("count_tag_" + i, "计数标签" + i, TagType.STRING, category));
-        }
-
-        long count = repository.countByCategory(category);
-        assertEquals(3, count);
+        TagDefinition updated = repository.findByTagKey("gender").orElseThrow();
+        assertEquals("用户性别", updated.getTagName());
+        assertEquals("用户的性别", updated.getDescription());
     }
 
     @Test
     void existsByTagKey() {
-        repository.insert(buildTag("exists_tag", "存在性测试", TagType.BOOLEAN, "misc"));
+        assertFalse(repository.existsByTagKey("city"));
 
-        assertTrue(repository.existsByTagKey("exists_tag"));
-        assertFalse(repository.existsByTagKey("non_existent_tag"));
+        repository.insert(newTagDefinition("city", "城市", TagType.STRING, "地域属性"));
+
+        assertTrue(repository.existsByTagKey("city"));
     }
 
-    private TagDefinition buildTag(String tagKey, String tagName, TagType tagType, String category) {
-        TagDefinition tag = new TagDefinition();
-        tag.setTagKey(tagKey);
-        tag.setTagName(tagName);
-        tag.setTagType(tagType);
-        tag.setCategory(category);
-        tag.setStatus(1);
-        tag.setCreatedBy("test");
-        return tag;
+    @Test
+    void findByCategoryAndPagination() {
+        repository.insert(newTagDefinition("age", "年龄", TagType.LONG, "基础属性"));
+        repository.insert(newTagDefinition("gender", "性别", TagType.ENUM, "基础属性"));
+        repository.insert(newTagDefinition("city", "城市", TagType.STRING, "地域属性"));
+
+        List<TagDefinition> basicPage1 = repository.findByCategory("基础属性", 1, 10);
+        assertEquals(2, basicPage1.size());
+
+        List<TagDefinition> locationPage1 = repository.findByCategory("地域属性", 1, 10);
+        assertEquals(1, locationPage1.size());
+
+        long basicCount = repository.countByCategory("基础属性");
+        assertEquals(2, basicCount);
+
+        List<TagDefinition> allPage = repository.findByCategory(null, 1, 10);
+        assertEquals(3, allPage.size());
+    }
+
+    private TagDefinition newTagDefinition(String tagKey, String tagName, TagType tagType, String category) {
+        TagDefinition td = new TagDefinition();
+        td.setTagKey(tagKey);
+        td.setTagName(tagName);
+        td.setTagType(tagType);
+        td.setCategory(category);
+        td.setStatus(1);
+        return td;
     }
 }
