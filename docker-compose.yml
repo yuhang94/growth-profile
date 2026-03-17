@@ -21,6 +21,47 @@ services:
       timeout: 3s
       retries: 10
 
+  # ==================== RocketMQ ====================
+  namesrv:
+    image: apache/rocketmq:5.3.1
+    container_name: gp-rocketmq-namesrv
+    ports:
+      - "9876:9876"
+    command: sh mqnamesrv
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx256m"
+
+  broker:
+    image: apache/rocketmq:5.3.1
+    container_name: gp-rocketmq-broker
+    ports:
+      - "10911:10911"
+      - "10909:10909"
+    command: sh mqbroker -n namesrv:9876 --enable-proxy
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx512m"
+      NAMESRV_ADDR: namesrv:9876
+    depends_on:
+      - namesrv
+
+  # ==================== ClickHouse ====================
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    container_name: gp-clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
   # ==================== growth-profile 服务 ====================
   growth-profile:
     build:
@@ -38,9 +79,18 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
       HBASE_ZOOKEEPER_QUORUM: 47.111.23.147
       HBASE_ZOOKEEPER_PORT: 2181
+      ROCKETMQ_NAME_SERVER: namesrv:9876
+      CLICKHOUSE_URL: jdbc:ch://clickhouse:8123/default
     depends_on:
       mysql:
         condition: service_healthy
+      namesrv:
+        condition: service_started
+      broker:
+        condition: service_started
+      clickhouse:
+        condition: service_started
 
 volumes:
   mysql-data:
+  clickhouse-data:

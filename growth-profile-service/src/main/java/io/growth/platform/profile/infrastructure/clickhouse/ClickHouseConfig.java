@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import javax.sql.DataSource;
 import com.clickhouse.jdbc.ClickHouseDataSource;
 import java.sql.SQLException;
 import java.util.Properties;
@@ -22,16 +21,12 @@ public class ClickHouseConfig {
     @Value("${clickhouse.password}")
     private String password;
 
-    @Bean("clickHouseDataSource")
-    public DataSource clickHouseDataSource() throws SQLException {
+    @Bean("clickHouseJdbcTemplate")
+    public JdbcTemplate clickHouseJdbcTemplate() throws SQLException {
         Properties properties = new Properties();
         properties.setProperty("user", username);
         properties.setProperty("password", password);
-        return new ClickHouseDataSource(url, properties);
-    }
-
-    @Bean("clickHouseJdbcTemplate")
-    public JdbcTemplate clickHouseJdbcTemplate() throws SQLException {
-        return new JdbcTemplate(clickHouseDataSource());
+        ClickHouseDataSource dataSource = new ClickHouseDataSource(url, properties);
+        return new JdbcTemplate(dataSource);
     }
 }
