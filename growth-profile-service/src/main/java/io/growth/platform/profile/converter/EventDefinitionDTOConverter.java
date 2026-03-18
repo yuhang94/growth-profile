@@ -3,8 +3,10 @@ package io.growth.platform.profile.converter;
 import io.growth.platform.profile.api.dto.EventDefinitionCreateRequest;
 import io.growth.platform.profile.api.dto.EventDefinitionDTO;
 import io.growth.platform.profile.api.dto.EventDefinitionUpdateRequest;
+import io.growth.platform.profile.api.dto.MqSourceConfigDTO;
 import io.growth.platform.profile.api.dto.PropertyDefinitionDTO;
 import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
+import io.growth.platform.profile.domain.model.MqSourceConfig;
 import io.growth.platform.profile.domain.model.PropertyDefinition;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
@@ -24,4 +26,8 @@ public interface EventDefinitionDTOConverter {
     PropertyDefinition toPropertyDomain(PropertyDefinitionDTO dto);
 
     PropertyDefinitionDTO toPropertyDTO(PropertyDefinition domain);
+
+    MqSourceConfig toMqSourceConfigDomain(MqSourceConfigDTO dto);
+
+    MqSourceConfigDTO toMqSourceConfigDTO(MqSourceConfig domain);
 }

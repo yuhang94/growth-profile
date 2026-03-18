@@ -1,8 +1,12 @@
 package io.growth.platform.profile.infrastructure.persistence.repository;
 
 import io.growth.platform.profile.BaseMyBatisTest;
+import io.growth.platform.profile.api.dto.FieldMapping;
 import io.growth.platform.profile.api.enums.EventType;
+import io.growth.platform.profile.api.enums.ExtractStrategy;
+import io.growth.platform.profile.api.enums.SourceType;
 import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
+import io.growth.platform.profile.domain.model.MqSourceConfig;
 import io.growth.platform.profile.domain.model.PropertyDefinition;
 import io.growth.platform.profile.domain.repository.EventDefinitionRepository;
 import io.growth.platform.profile.infrastructure.persistence.mapper.EventDefinitionMapper;
@@ -104,11 +108,84 @@ class EventDefinitionRepositoryImplIT extends BaseMyBatisTest {
         assertTrue(loaded.getProperties().get(0).isRequired());
     }
 
+    @Test
+    void sourceType_defaultsToSdk() {
+        BehaviorEventDefinition def = newEventDefinition("sdk_event", EventType.CUSTOM, "SDK事件");
+        repository.insert(def);
+
+        BehaviorEventDefinition loaded = repository.findByEventName("sdk_event").orElseThrow();
+        assertEquals(SourceType.SDK, loaded.getSourceType());
+    }
+
+    @Test
+    void sourceType_mqWithConfig_roundTrip() {
+        BehaviorEventDefinition def = newEventDefinition("mq_event", EventType.CUSTOM, "MQ事件");
+        def.setSourceType(SourceType.MQ);
+
+        MqSourceConfig config = new MqSourceConfig();
+        config.setTopic("order-topic");
+        config.setTag("pay");
+        config.setConsumerGroup("profile-order-cg");
+
+        FieldMapping mapping = new FieldMapping();
+        mapping.setTargetField("userId");
+        mapping.setStrategy(ExtractStrategy.JSON_PATH);
+        mapping.setExpression("$.uid");
+        config.setFieldMappings(List.of(mapping));
+
+        def.setMqSourceConfig(config);
+        repository.insert(def);
+
+        BehaviorEventDefinition loaded = repository.findByEventName("mq_event").orElseThrow();
+        assertEquals(SourceType.MQ, loaded.getSourceType());
+        assertNotNull(loaded.getMqSourceConfig());
+        assertEquals("order-topic", loaded.getMqSourceConfig().getTopic());
+        assertEquals("pay", loaded.getMqSourceConfig().getTag());
+        assertEquals("profile-order-cg", loaded.getMqSourceConfig().getConsumerGroup());
+        assertEquals(1, loaded.getMqSourceConfig().getFieldMappings().size());
+        assertEquals("userId", loaded.getMqSourceConfig().getFieldMappings().get(0).getTargetField());
+        assertEquals(ExtractStrategy.JSON_PATH, loaded.getMqSourceConfig().getFieldMappings().get(0).getStrategy());
+        assertEquals("$.uid", loaded.getMqSourceConfig().getFieldMappings().get(0).getExpression());
+    }
+
+    @Test
+    void findAllBySourceTypeAndStatus() {
+        BehaviorEventDefinition sdkDef = newEventDefinition("sdk_event", EventType.CUSTOM, "SDK事件");
+        repository.insert(sdkDef);
+
+        BehaviorEventDefinition mqDef = newEventDefinition("mq_event", EventType.CUSTOM, "MQ事件");
+        mqDef.setSourceType(SourceType.MQ);
+        MqSourceConfig config = new MqSourceConfig();
+        config.setTopic("test-topic");
+        config.setConsumerGroup("test-cg");
+        FieldMapping mapping = new FieldMapping();
+        mapping.setTargetField("userId");
+        mapping.setStrategy(ExtractStrategy.JSON_PATH);
+        mapping.setExpression("$.uid");
+        config.setFieldMappings(List.of(mapping));
+        mqDef.setMqSourceConfig(config);
+        repository.insert(mqDef);
+
+        BehaviorEventDefinition mqDisabled = newEventDefinition("mq_disabled", EventType.CUSTOM, "MQ禁用");
+        mqDisabled.setSourceType(SourceType.MQ);
+        mqDisabled.setStatus(0);
+        mqDisabled.setMqSourceConfig(config);
+        repository.insert(mqDisabled);
+
+        List<BehaviorEventDefinition> mqEnabled = repository.findAllBySourceTypeAndStatus(SourceType.MQ, 1);
+        assertEquals(1, mqEnabled.size());
+        assertEquals("mq_event", mqEnabled.get(0).getEventName());
+
+        List<BehaviorEventDefinition> allMq = repository.findAllBySourceTypeAndStatus(SourceType.MQ, null);
+        assertEquals(2, allMq.size());
+    }
+
     private BehaviorEventDefinition newEventDefinition(String eventName, EventType eventType, String displayName) {
         BehaviorEventDefinition def = new BehaviorEventDefinition();
         def.setEventName(eventName);
         def.setEventType(eventType);
         def.setDisplayName(displayName);
+        def.setSourceType(SourceType.SDK);
         def.setStatus(1);
         return def;
     }

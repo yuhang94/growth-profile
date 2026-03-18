@@ -2,6 +2,7 @@ package io.growth.platform.profile.infrastructure.persistence.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.growth.platform.profile.api.enums.SourceType;
 import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
 import io.growth.platform.profile.domain.repository.EventDefinitionRepository;
 import io.growth.platform.profile.infrastructure.persistence.converter.EventDefinitionConverter;
@@ -69,5 +70,15 @@ public class EventDefinitionRepositoryImpl implements EventDefinitionRepository 
         LambdaQueryWrapper<EventDefinitionDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EventDefinitionDO::getEventName, eventName);
         return mapper.selectCount(wrapper) > 0;
+    }
+
+    @Override
+    public List<BehaviorEventDefinition> findAllBySourceTypeAndStatus(SourceType sourceType, Integer status) {
+        LambdaQueryWrapper<EventDefinitionDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(EventDefinitionDO::getSourceType, sourceType.name());
+        if (status != null) {
+            wrapper.eq(EventDefinitionDO::getStatus, status);
+        }
+        return mapper.selectList(wrapper).stream().map(converter::toDomain).toList();
     }
 }

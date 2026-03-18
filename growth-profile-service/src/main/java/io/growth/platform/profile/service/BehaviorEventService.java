@@ -5,11 +5,13 @@ import io.growth.platform.common.core.exception.CommonErrorCode;
 import io.growth.platform.profile.api.dto.BehaviorEventBatchRequest;
 import io.growth.platform.profile.api.dto.BehaviorEventDTO;
 import io.growth.platform.profile.api.dto.BehaviorEventRequest;
+import io.growth.platform.profile.api.enums.SourceType;
 import io.growth.platform.profile.converter.BehaviorEventDTOConverter;
 import io.growth.platform.profile.domain.model.BehaviorEvent;
 import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
 import io.growth.platform.profile.domain.repository.BehaviorEventRepository;
 import io.growth.platform.profile.domain.repository.EventDefinitionRepository;
+import io.growth.platform.profile.domain.service.EventPropertyValidator;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,12 +24,15 @@ public class BehaviorEventService {
 
     private final BehaviorEventRepository behaviorEventRepository;
     private final EventDefinitionRepository eventDefinitionRepository;
+    private final EventPropertyValidator eventPropertyValidator;
     private final BehaviorEventDTOConverter converter = BehaviorEventDTOConverter.INSTANCE;
 
     public BehaviorEventService(BehaviorEventRepository behaviorEventRepository,
-                                EventDefinitionRepository eventDefinitionRepository) {
+                                EventDefinitionRepository eventDefinitionRepository,
+                                EventPropertyValidator eventPropertyValidator) {
         this.behaviorEventRepository = behaviorEventRepository;
         this.eventDefinitionRepository = eventDefinitionRepository;
+        this.eventPropertyValidator = eventPropertyValidator;
     }
 
     public void report(BehaviorEventRequest request) {
@@ -36,6 +41,14 @@ public class BehaviorEventService {
         if (!definition.isEnabled()) {
             throw new BizException(CommonErrorCode.PARAM_ERROR, "事件已禁用: " + request.getEventName());
         }
+
+        // MQ type events cannot be reported via HTTP
+        if (definition.getSourceType() == SourceType.MQ) {
+            throw new BizException(CommonErrorCode.PARAM_ERROR, "MQ类型事件不允许通过HTTP上报: " + request.getEventName());
+        }
+
+        // Validate properties
+        eventPropertyValidator.validate(request.getProperties(), definition.getProperties());
 
         BehaviorEvent event = new BehaviorEvent();
         event.setEventId(UUID.randomUUID().toString());
@@ -57,6 +70,14 @@ public class BehaviorEventService {
             if (!definition.isEnabled()) {
                 throw new BizException(CommonErrorCode.PARAM_ERROR, "事件已禁用: " + item.getEventName());
             }
+
+            // MQ type events cannot be reported via HTTP
+            if (definition.getSourceType() == SourceType.MQ) {
+                throw new BizException(CommonErrorCode.PARAM_ERROR, "MQ类型事件不允许通过HTTP上报: " + item.getEventName());
+            }
+
+            // Validate properties
+            eventPropertyValidator.validate(item.getProperties(), definition.getProperties());
 
             BehaviorEvent event = new BehaviorEvent();
             event.setEventId(UUID.randomUUID().toString());

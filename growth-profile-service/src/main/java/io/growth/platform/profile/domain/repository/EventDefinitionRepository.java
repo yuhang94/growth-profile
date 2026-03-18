@@ -1,5 +1,6 @@
 package io.growth.platform.profile.domain.repository;
 
+import io.growth.platform.profile.api.enums.SourceType;
 import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
 
 import java.util.List;
@@ -18,4 +19,6 @@ public interface EventDefinitionRepository {
     long countByEventType(String eventType);
 
     boolean existsByEventName(String eventName);
+
+    List<BehaviorEventDefinition> findAllBySourceTypeAndStatus(SourceType sourceType, Integer status);
 }

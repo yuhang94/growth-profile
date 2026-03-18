@@ -1,6 +1,8 @@
 package io.growth.platform.profile.api.dto;
 
 import io.growth.platform.profile.api.enums.EventType;
+import io.growth.platform.profile.api.enums.SourceType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -22,4 +24,9 @@ public class EventDefinitionCreateRequest {
     private String description;
 
     private List<PropertyDefinitionDTO> properties;
+
+    private SourceType sourceType;
+
+    @Valid
+    private MqSourceConfigDTO mqSourceConfig;
 }

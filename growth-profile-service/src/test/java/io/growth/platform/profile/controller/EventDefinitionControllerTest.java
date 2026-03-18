@@ -6,6 +6,7 @@ import io.growth.platform.profile.api.dto.EventDefinitionCreateRequest;
 import io.growth.platform.profile.api.dto.EventDefinitionDTO;
 import io.growth.platform.profile.api.dto.EventDefinitionUpdateRequest;
 import io.growth.platform.profile.api.enums.EventType;
+import io.growth.platform.profile.infrastructure.mq.DynamicMqConsumerManager;
 import io.growth.platform.profile.service.EventDefinitionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ class EventDefinitionControllerTest {
 
     @MockBean
     private EventDefinitionService eventDefinitionService;
+
+    @MockBean
+    private DynamicMqConsumerManager dynamicMqConsumerManager;
 
     @Test
     void create_success() throws Exception {

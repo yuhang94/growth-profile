@@ -21,6 +21,8 @@ public class EventDefinitionDO {
     private String displayName;
     private String description;
     private String propertiesJson;
+    private String sourceType;
+    private String mqSourceConfigJson;
     private Integer status;
     private String createdBy;
 

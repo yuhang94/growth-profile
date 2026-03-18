@@ -5,10 +5,13 @@ import io.growth.platform.profile.api.dto.BehaviorEventBatchRequest;
 import io.growth.platform.profile.api.dto.BehaviorEventDTO;
 import io.growth.platform.profile.api.dto.BehaviorEventRequest;
 import io.growth.platform.profile.api.enums.EventType;
+import io.growth.platform.profile.api.enums.SourceType;
 import io.growth.platform.profile.domain.model.BehaviorEvent;
 import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
+import io.growth.platform.profile.domain.model.PropertyDefinition;
 import io.growth.platform.profile.domain.repository.BehaviorEventRepository;
 import io.growth.platform.profile.domain.repository.EventDefinitionRepository;
+import io.growth.platform.profile.domain.service.EventPropertyValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +37,9 @@ class BehaviorEventServiceTest {
     @Mock
     private EventDefinitionRepository eventDefinitionRepository;
 
+    @Mock
+    private EventPropertyValidator eventPropertyValidator;
+
     @InjectMocks
     private BehaviorEventService behaviorEventService;
 
@@ -45,6 +51,7 @@ class BehaviorEventServiceTest {
         enabledDefinition.setId(1L);
         enabledDefinition.setEventName("page_view");
         enabledDefinition.setEventType(EventType.PAGE_VIEW);
+        enabledDefinition.setSourceType(SourceType.SDK);
         enabledDefinition.setStatus(1);
     }
 
@@ -61,6 +68,7 @@ class BehaviorEventServiceTest {
         behaviorEventService.report(request);
 
         verify(behaviorEventRepository).insert(any());
+        verify(eventPropertyValidator).validate(any(), any());
     }
 
     @Test
@@ -80,12 +88,52 @@ class BehaviorEventServiceTest {
         BehaviorEventDefinition disabled = new BehaviorEventDefinition();
         disabled.setEventName("page_view");
         disabled.setEventType(EventType.PAGE_VIEW);
+        disabled.setSourceType(SourceType.SDK);
         disabled.setStatus(0);
         when(eventDefinitionRepository.findByEventName("page_view")).thenReturn(Optional.of(disabled));
 
         BehaviorEventRequest request = new BehaviorEventRequest();
         request.setUserId("user001");
         request.setEventName("page_view");
+        request.setEventTime(LocalDateTime.now());
+
+        assertThrows(BizException.class, () -> behaviorEventService.report(request));
+    }
+
+    @Test
+    void report_mqTypeEvent_rejected() {
+        BehaviorEventDefinition mqDef = new BehaviorEventDefinition();
+        mqDef.setEventName("mq_event");
+        mqDef.setEventType(EventType.CUSTOM);
+        mqDef.setSourceType(SourceType.MQ);
+        mqDef.setStatus(1);
+        when(eventDefinitionRepository.findByEventName("mq_event")).thenReturn(Optional.of(mqDef));
+
+        BehaviorEventRequest request = new BehaviorEventRequest();
+        request.setUserId("user001");
+        request.setEventName("mq_event");
+        request.setEventTime(LocalDateTime.now());
+
+        BizException ex = assertThrows(BizException.class, () -> behaviorEventService.report(request));
+        assertTrue(ex.getMessage().contains("MQ类型事件不允许通过HTTP上报"));
+    }
+
+    @Test
+    void report_propertyValidationFails() {
+        PropertyDefinition prop = new PropertyDefinition();
+        prop.setPropertyName("amount");
+        prop.setPropertyType("LONG");
+        prop.setRequired(true);
+        enabledDefinition.setProperties(List.of(prop));
+
+        when(eventDefinitionRepository.findByEventName("page_view")).thenReturn(Optional.of(enabledDefinition));
+        doThrow(new BizException(CommonErrorCodeForTest.PARAM_ERROR, "必填属性缺失: amount"))
+                .when(eventPropertyValidator).validate(any(), any());
+
+        BehaviorEventRequest request = new BehaviorEventRequest();
+        request.setUserId("user001");
+        request.setEventName("page_view");
+        request.setProperties(Map.of());
         request.setEventTime(LocalDateTime.now());
 
         assertThrows(BizException.class, () -> behaviorEventService.report(request));
@@ -150,5 +198,11 @@ class BehaviorEventServiceTest {
 
         assertEquals(1, results.size());
         assertEquals("click", results.get(0).getEventName());
+    }
+
+    // Helper for test: use CommonErrorCode.PARAM_ERROR
+    private static class CommonErrorCodeForTest {
+        static final io.growth.platform.common.core.exception.CommonErrorCode PARAM_ERROR =
+                io.growth.platform.common.core.exception.CommonErrorCode.PARAM_ERROR;
     }
 }
