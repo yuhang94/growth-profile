@@ -2,13 +2,13 @@ package io.growth.platform.profile.infrastructure.mq.extract;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.codehaus.groovy.jsr223.GroovyScriptEngineFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.script.Bindings;
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import javax.script.SimpleBindings;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -25,13 +25,11 @@ public class GroovyExtractor implements FieldExtractor {
     private static final Logger log = LoggerFactory.getLogger(GroovyExtractor.class);
     private static final long TIMEOUT_MS = 500;
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final GroovyScriptEngineFactory ENGINE_FACTORY = new GroovyScriptEngineFactory();
 
-    private final ScriptEngine engine;
     private final ExecutorService executor;
 
     public GroovyExtractor() {
-        ScriptEngineManager manager = new ScriptEngineManager();
-        this.engine = manager.getEngineByName("groovy");
         this.executor = Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r, "groovy-extractor");
             t.setDaemon(true);
@@ -47,6 +45,7 @@ public class GroovyExtractor implements FieldExtractor {
             Bindings bindings = new SimpleBindings();
             bindings.put("msg", msg);
 
+            ScriptEngine engine = ENGINE_FACTORY.getScriptEngine();
             Callable<Object> task = () -> engine.eval(expression, bindings);
             Future<Object> future = executor.submit(task);
 
