@@ -1,6 +1,7 @@
 package io.growth.platform.profile.domain.model;
 
 import io.growth.platform.profile.api.enums.EventType;
+import io.growth.platform.profile.api.enums.SourceType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -15,6 +16,8 @@ public class BehaviorEventDefinition {
     private String displayName;
     private String description;
     private List<PropertyDefinition> properties;
+    private SourceType sourceType;
+    private MqSourceConfig mqSourceConfig;
     private Integer status;
     private String createdBy;
     private LocalDateTime createdTime;

@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS `gp_profile_event_definition` (
     `display_name`    VARCHAR(128) NOT NULL COMMENT '显示名称',
     `description`     VARCHAR(512)          DEFAULT NULL COMMENT '描述',
     `properties_json` TEXT                  DEFAULT NULL COMMENT '属性定义JSON',
+    `source_type`     VARCHAR(16)  NOT NULL DEFAULT 'SDK' COMMENT '来源类型 SDK/MQ',
+    `mq_source_config_json` TEXT           DEFAULT NULL COMMENT 'MQ来源配置JSON',
     `status`          TINYINT      NOT NULL DEFAULT 1 COMMENT '状态 1-启用 0-禁用',
     `created_by`      VARCHAR(64)           DEFAULT NULL COMMENT '创建人',
     `created_time`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
