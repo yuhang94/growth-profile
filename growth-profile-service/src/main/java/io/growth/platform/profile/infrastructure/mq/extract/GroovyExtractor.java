@@ -23,7 +23,7 @@ import java.util.concurrent.TimeoutException;
 public class GroovyExtractor implements FieldExtractor {
 
     private static final Logger log = LoggerFactory.getLogger(GroovyExtractor.class);
-    private static final long TIMEOUT_MS = 500;
+    private static final long TIMEOUT_MS = 3000;
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final GroovyScriptEngineFactory ENGINE_FACTORY = new GroovyScriptEngineFactory();
 
@@ -35,6 +35,13 @@ public class GroovyExtractor implements FieldExtractor {
             t.setDaemon(true);
             return t;
         });
+        // Warm up the engine to avoid first-call compilation delay
+        try {
+            ScriptEngine warmup = ENGINE_FACTORY.getScriptEngine();
+            warmup.eval("1+1");
+        } catch (Exception e) {
+            log.warn("Groovy engine warm-up failed: {}", e.getMessage());
+        }
     }
 
     @Override
