@@ -3,6 +3,7 @@ package io.growth.platform.profile.infrastructure.mq;
 import io.growth.platform.profile.api.dto.FieldMapping;
 import io.growth.platform.profile.api.enums.ExtractStrategy;
 import io.growth.platform.profile.domain.model.BehaviorEvent;
+import io.growth.platform.profile.domain.model.PropertyDefinition;
 import io.growth.platform.profile.infrastructure.mq.extract.GroovyExtractor;
 import io.growth.platform.profile.infrastructure.mq.extract.JsonPathExtractor;
 import io.growth.platform.profile.infrastructure.mq.extract.LocalFuncExtractor;
@@ -38,13 +39,19 @@ class EventMessageParserTest {
                 """;
 
         List<FieldMapping> mappings = List.of(
-                newMapping("userId", ExtractStrategy.JSON_PATH, "$.uid", null, null),
-                newMapping("eventTime", ExtractStrategy.JSON_PATH, "$.ts", "DATETIME_STRING", null),
-                newMapping("page", ExtractStrategy.JSON_PATH, "$.page", null, null),
-                newMapping("duration", ExtractStrategy.JSON_PATH, "$.duration", null, null)
+                newMapping("userId", ExtractStrategy.JSON_PATH, "$.uid"),
+                newMapping("eventTime", ExtractStrategy.JSON_PATH, "$.ts"),
+                newMapping("page", ExtractStrategy.JSON_PATH, "$.page"),
+                newMapping("duration", ExtractStrategy.JSON_PATH, "$.duration")
+        );
+        List<PropertyDefinition> properties = List.of(
+                newProperty("userId", "STRING", null),
+                newProperty("eventTime", "DATETIME_STRING", null),
+                newProperty("page", "STRING", null),
+                newProperty("duration", "LONG", null)
         );
 
-        BehaviorEvent event = parser.parse(json, "page_view", mappings);
+        BehaviorEvent event = parser.parse(json, "page_view", mappings, properties);
 
         assertEquals("user001", event.getUserId());
         assertEquals("page_view", event.getEventName());
@@ -64,11 +71,15 @@ class EventMessageParserTest {
                 """;
 
         List<FieldMapping> mappings = List.of(
-                newMapping("userId", ExtractStrategy.JSON_PATH, "$.uid", null, null),
-                newMapping("totalAmount", ExtractStrategy.GROOVY, "msg.price * msg.quantity", null, null)
+                newMapping("userId", ExtractStrategy.JSON_PATH, "$.uid"),
+                newMapping("totalAmount", ExtractStrategy.GROOVY, "msg.price * msg.quantity")
+        );
+        List<PropertyDefinition> properties = List.of(
+                newProperty("userId", "STRING", null),
+                newProperty("totalAmount", "DOUBLE", null)
         );
 
-        BehaviorEvent event = parser.parse(json, "purchase", mappings);
+        BehaviorEvent event = parser.parse(json, "purchase", mappings, properties);
 
         assertEquals("user002", event.getUserId());
         assertEquals("300", event.getProperties().get("totalAmount"));
@@ -81,11 +92,15 @@ class EventMessageParserTest {
                 """;
 
         List<FieldMapping> mappings = List.of(
-                newMapping("userId", ExtractStrategy.JSON_PATH, "$.uid", null, null),
-                newMapping("channel", ExtractStrategy.JSON_PATH, "$.channel", null, "organic")
+                newMapping("userId", ExtractStrategy.JSON_PATH, "$.uid"),
+                newMapping("channel", ExtractStrategy.JSON_PATH, "$.channel")
+        );
+        List<PropertyDefinition> properties = List.of(
+                newProperty("userId", "STRING", null),
+                newProperty("channel", "STRING", "organic")
         );
 
-        BehaviorEvent event = parser.parse(json, "login", mappings);
+        BehaviorEvent event = parser.parse(json, "login", mappings, properties);
 
         assertEquals("user003", event.getUserId());
         assertEquals("organic", event.getProperties().get("channel"));
@@ -98,10 +113,11 @@ class EventMessageParserTest {
                 """;
 
         List<FieldMapping> mappings = List.of(
-                newMapping("userId", ExtractStrategy.JSON_PATH, "$.uid", null, null)
+                newMapping("userId", ExtractStrategy.JSON_PATH, "$.uid")
         );
+        List<PropertyDefinition> properties = List.of(newProperty("userId", "STRING", null));
 
-        BehaviorEvent event = parser.parse(json, "test_event", mappings);
+        BehaviorEvent event = parser.parse(json, "test_event", mappings, properties);
 
         assertNotNull(event.getEventTime());
     }
@@ -113,24 +129,33 @@ class EventMessageParserTest {
                 """;
 
         List<FieldMapping> mappings = List.of(
-                newMapping("userId", ExtractStrategy.JSON_PATH, "$.uid", null, null),
-                newMapping("eventTime", ExtractStrategy.JSON_PATH, "$.timestamp", "EPOCH_SECOND", null)
+                newMapping("userId", ExtractStrategy.JSON_PATH, "$.uid"),
+                newMapping("eventTime", ExtractStrategy.JSON_PATH, "$.timestamp")
+        );
+        List<PropertyDefinition> properties = List.of(
+                newProperty("userId", "STRING", null),
+                newProperty("eventTime", "EPOCH_SECOND", null)
         );
 
-        BehaviorEvent event = parser.parse(json, "test_event", mappings);
+        BehaviorEvent event = parser.parse(json, "test_event", mappings, properties);
 
         assertNotNull(event.getEventTime());
         assertEquals(2024, event.getEventTime().getYear());
     }
 
-    private FieldMapping newMapping(String targetField, ExtractStrategy strategy,
-                                    String expression, String sourceType, String defaultValue) {
+    private FieldMapping newMapping(String targetField, ExtractStrategy strategy, String expression) {
         FieldMapping mapping = new FieldMapping();
         mapping.setTargetField(targetField);
         mapping.setStrategy(strategy);
         mapping.setExpression(expression);
-        mapping.setSourceType(sourceType);
-        mapping.setDefaultValue(defaultValue);
         return mapping;
+    }
+
+    private PropertyDefinition newProperty(String propertyName, String propertyType, String defaultValue) {
+        PropertyDefinition property = new PropertyDefinition();
+        property.setPropertyName(propertyName);
+        property.setPropertyType(propertyType);
+        property.setDefaultValue(defaultValue);
+        return property;
     }
 }

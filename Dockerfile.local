@@ -1,0 +1,12 @@
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+COPY growth-profile-service/target/growth-profile-service-0.1.0-SNAPSHOT.jar app.jar
+
+EXPOSE 8082
+
+ENTRYPOINT ["java", \
+  "-Xms256m", "-Xmx512m", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-jar", "app.jar"]

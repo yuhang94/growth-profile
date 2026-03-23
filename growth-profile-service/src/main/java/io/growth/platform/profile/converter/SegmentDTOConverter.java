@@ -1,9 +1,11 @@
 package io.growth.platform.profile.converter;
 
+import io.growth.platform.profile.api.dto.EventPropertyFilterDTO;
 import io.growth.platform.profile.api.dto.SegmentConditionDTO;
 import io.growth.platform.profile.api.dto.SegmentCreateRequest;
 import io.growth.platform.profile.api.dto.SegmentDTO;
 import io.growth.platform.profile.api.dto.SegmentUpdateRequest;
+import io.growth.platform.profile.domain.model.EventPropertyFilter;
 import io.growth.platform.profile.domain.model.Segment;
 import io.growth.platform.profile.domain.model.SegmentCondition;
 import org.mapstruct.Mapper;
@@ -26,4 +28,8 @@ public interface SegmentDTOConverter {
     SegmentCondition toConditionDomain(SegmentConditionDTO dto);
 
     SegmentConditionDTO toConditionDTO(SegmentCondition domain);
+
+    EventPropertyFilter toFilterDomain(EventPropertyFilterDTO dto);
+
+    EventPropertyFilterDTO toFilterDTO(EventPropertyFilter domain);
 }

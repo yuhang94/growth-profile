@@ -7,6 +7,7 @@ import io.growth.platform.profile.api.dto.EventDefinitionDTO;
 import io.growth.platform.profile.api.dto.EventDefinitionUpdateRequest;
 import io.growth.platform.profile.api.dto.FieldMapping;
 import io.growth.platform.profile.api.dto.MqSourceConfigDTO;
+import io.growth.platform.profile.api.dto.PropertyDefinitionDTO;
 import io.growth.platform.profile.api.enums.EventType;
 import io.growth.platform.profile.api.enums.ExtractStrategy;
 import io.growth.platform.profile.api.enums.SourceType;
@@ -18,6 +19,7 @@ import io.growth.platform.profile.infrastructure.mq.EventMessageParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -99,6 +101,82 @@ class EventDefinitionServiceTest {
         eventDefinitionService.create(request);
 
         verify(dynamicMqConsumerManager).register(eq("mq_event"), any());
+    }
+
+    @Test
+    void create_mqType_writesFieldMappingsIntoProperties() {
+        when(eventDefinitionRepository.existsByEventName("mq_event")).thenReturn(false);
+        doAnswer(inv -> {
+            BehaviorEventDefinition def = inv.getArgument(0);
+            def.setId(2L);
+            return null;
+        }).when(eventDefinitionRepository).insert(any());
+
+        EventDefinitionCreateRequest request = new EventDefinitionCreateRequest();
+        request.setEventName("mq_event");
+        request.setEventType(EventType.CUSTOM);
+        request.setDisplayName("MQ事件");
+        request.setSourceType(SourceType.MQ);
+        request.setMqSourceConfig(newMqConfig());
+        request.setProperties(List.of(newProperty("orderId", "STRING", "N/A"), newProperty("amount", "DOUBLE", "0")));
+
+        eventDefinitionService.create(request);
+
+        ArgumentCaptor<BehaviorEventDefinition> captor = ArgumentCaptor.forClass(BehaviorEventDefinition.class);
+        verify(eventDefinitionRepository).insert(captor.capture());
+
+        List<String> propertyNames = captor.getValue().getProperties().stream()
+                .map(property -> property.getPropertyName()
+                        + ":" + property.getPropertyType()
+                        + ":" + property.getDefaultValue())
+                .toList();
+        assertEquals(List.of("orderId:STRING:N/A", "amount:DOUBLE:0", "userId:null:null", "eventTime:null:null"), propertyNames);
+    }
+
+    @Test
+    void create_mqType_preservesExplicitPropertyDefinition() {
+        when(eventDefinitionRepository.existsByEventName("mq_event")).thenReturn(false);
+        doAnswer(inv -> {
+            BehaviorEventDefinition def = inv.getArgument(0);
+            def.setId(2L);
+            return null;
+        }).when(eventDefinitionRepository).insert(any());
+
+        EventDefinitionCreateRequest request = new EventDefinitionCreateRequest();
+        request.setEventName("mq_event");
+        request.setEventType(EventType.CUSTOM);
+        request.setDisplayName("MQ事件");
+        request.setSourceType(SourceType.MQ);
+        request.setMqSourceConfig(newMqConfig());
+
+        PropertyDefinitionDTO amount = new PropertyDefinitionDTO();
+        amount.setPropertyName("amount");
+        amount.setPropertyType("LONG");
+        amount.setDefaultValue("-1");
+        amount.setDisplayName("支付金额");
+        amount.setRequired(true);
+        request.setProperties(List.of(
+                newProperty("userId", "STRING", null),
+                newProperty("eventTime", "EPOCH_MILLIS", null),
+                amount
+        ));
+
+        eventDefinitionService.create(request);
+
+        ArgumentCaptor<BehaviorEventDefinition> captor = ArgumentCaptor.forClass(BehaviorEventDefinition.class);
+        verify(eventDefinitionRepository).insert(captor.capture());
+
+        assertEquals(4, captor.getValue().getProperties().size());
+        assertEquals("STRING", captor.getValue().getProperties().get(0).getPropertyType());
+        assertNull(captor.getValue().getProperties().get(0).getDefaultValue());
+        assertEquals("EPOCH_MILLIS", captor.getValue().getProperties().get(1).getPropertyType());
+        assertEquals("LONG", captor.getValue().getProperties().get(2).getPropertyType());
+        assertEquals("-1", captor.getValue().getProperties().get(2).getDefaultValue());
+        assertEquals("支付金额", captor.getValue().getProperties().get(2).getDisplayName());
+        assertTrue(captor.getValue().getProperties().get(2).isRequired());
+        assertEquals("orderId", captor.getValue().getProperties().get(3).getPropertyName());
+        assertNull(captor.getValue().getProperties().get(3).getPropertyType());
+        assertNull(captor.getValue().getProperties().get(3).getDefaultValue());
     }
 
     @Test
@@ -227,11 +305,27 @@ class EventDefinitionServiceTest {
         config.setTopic("test-topic");
         config.setConsumerGroup("test-cg");
 
-        FieldMapping mapping = new FieldMapping();
-        mapping.setTargetField("userId");
-        mapping.setStrategy(ExtractStrategy.JSON_PATH);
-        mapping.setExpression("$.uid");
-        config.setFieldMappings(List.of(mapping));
+        FieldMapping userId = new FieldMapping();
+        userId.setTargetField("userId");
+        userId.setStrategy(ExtractStrategy.JSON_PATH);
+        userId.setExpression("$.uid");
+
+        FieldMapping eventTime = new FieldMapping();
+        eventTime.setTargetField("eventTime");
+        eventTime.setStrategy(ExtractStrategy.JSON_PATH);
+        eventTime.setExpression("$.eventTime");
+
+        FieldMapping orderId = new FieldMapping();
+        orderId.setTargetField("orderId");
+        orderId.setStrategy(ExtractStrategy.JSON_PATH);
+        orderId.setExpression("$.orderId");
+
+        FieldMapping amount = new FieldMapping();
+        amount.setTargetField("amount");
+        amount.setStrategy(ExtractStrategy.JSON_PATH);
+        amount.setExpression("$.amount");
+
+        config.setFieldMappings(List.of(userId, eventTime, orderId, amount));
 
         return config;
     }
@@ -248,5 +342,15 @@ class EventDefinitionServiceTest {
         config.setFieldMappings(List.of(mapping));
 
         return config;
+    }
+
+    private PropertyDefinitionDTO newProperty(String propertyName, String propertyType, String defaultValue) {
+        PropertyDefinitionDTO property = new PropertyDefinitionDTO();
+        property.setPropertyName(propertyName);
+        property.setPropertyType(propertyType);
+        property.setDefaultValue(defaultValue);
+        property.setDisplayName(propertyName);
+        property.setRequired(false);
+        return property;
     }
 }

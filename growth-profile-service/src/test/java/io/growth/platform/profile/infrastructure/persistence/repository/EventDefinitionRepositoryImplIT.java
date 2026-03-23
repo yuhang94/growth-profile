@@ -9,6 +9,7 @@ import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
 import io.growth.platform.profile.domain.model.MqSourceConfig;
 import io.growth.platform.profile.domain.model.PropertyDefinition;
 import io.growth.platform.profile.domain.repository.EventDefinitionRepository;
+import io.growth.platform.profile.infrastructure.persistence.dataobject.EventDefinitionDO;
 import io.growth.platform.profile.infrastructure.persistence.mapper.EventDefinitionMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -146,6 +147,42 @@ class EventDefinitionRepositoryImplIT extends BaseMyBatisTest {
         assertEquals("userId", loaded.getMqSourceConfig().getFieldMappings().get(0).getTargetField());
         assertEquals(ExtractStrategy.JSON_PATH, loaded.getMqSourceConfig().getFieldMappings().get(0).getStrategy());
         assertEquals("$.uid", loaded.getMqSourceConfig().getFieldMappings().get(0).getExpression());
+    }
+
+    @Test
+    void findByEventType_legacyFieldMappingPayload_ignoresUnknownProperties() {
+        EventDefinitionDO dataObject = new EventDefinitionDO();
+        dataObject.setEventName("legacy_mq_event");
+        dataObject.setEventType(EventType.CUSTOM.name());
+        dataObject.setDisplayName("历史MQ事件");
+        dataObject.setSourceType(SourceType.MQ.name());
+        dataObject.setStatus(1);
+        dataObject.setMqSourceConfigJson("""
+                {
+                  "topic": "order-topic",
+                  "tag": "pay",
+                  "consumerGroup": "profile-order-cg",
+                  "fieldMappings": [
+                    {
+                      "targetField": "userId",
+                      "strategy": "JSON_PATH",
+                      "expression": "$.uid",
+                      "sourceType": "STRING"
+                    }
+                  ]
+                }
+                """);
+        mapper.insert(dataObject);
+
+        List<BehaviorEventDefinition> loaded = repository.findByEventType(EventType.CUSTOM.name(), 1, 10);
+
+        assertEquals(1, loaded.size());
+        assertEquals("legacy_mq_event", loaded.get(0).getEventName());
+        assertNotNull(loaded.get(0).getMqSourceConfig());
+        assertEquals(1, loaded.get(0).getMqSourceConfig().getFieldMappings().size());
+        assertEquals("userId", loaded.get(0).getMqSourceConfig().getFieldMappings().get(0).getTargetField());
+        assertEquals(ExtractStrategy.JSON_PATH, loaded.get(0).getMqSourceConfig().getFieldMappings().get(0).getStrategy());
+        assertEquals("$.uid", loaded.get(0).getMqSourceConfig().getFieldMappings().get(0).getExpression());
     }
 
     @Test

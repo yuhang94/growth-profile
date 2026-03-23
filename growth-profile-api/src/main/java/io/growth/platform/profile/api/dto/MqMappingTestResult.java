@@ -21,7 +21,6 @@ public class MqMappingTestResult {
     @AllArgsConstructor
     public static class ExtractedField {
         private Object value;
-        private String sourceType;
     }
 
     @Data

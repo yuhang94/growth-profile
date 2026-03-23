@@ -46,3 +46,30 @@ CREATE TABLE IF NOT EXISTS `gp_profile_event_definition` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_event_name` (`event_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行为事件定义表';
+
+CREATE TABLE IF NOT EXISTS `gp_profile_event_template` (
+    `id`            BIGINT       NOT NULL AUTO_INCREMENT,
+    `event_type`    VARCHAR(32)  NOT NULL COMMENT '事件类型(PAGE_VIEW/CLICK/ORDER等)',
+    `template_name` VARCHAR(64)  NOT NULL COMMENT '模版名称',
+    `description`   VARCHAR(256)          DEFAULT '' COMMENT '模版描述',
+    `sample_json`   TEXT         NOT NULL COMMENT '样例JSON消息体',
+    `created_by`    VARCHAR(64)           DEFAULT '' COMMENT '创建人',
+    `created_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_event_type` (`event_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='事件消息模版';
+
+CREATE TABLE IF NOT EXISTS `gp_profile_segment_template` (
+    `id`           BIGINT        NOT NULL AUTO_INCREMENT,
+    `template_key` VARCHAR(64)   NOT NULL COMMENT '模板唯一标识',
+    `title`        VARCHAR(128)  NOT NULL COMMENT '模板标题',
+    `description`  VARCHAR(512)  NOT NULL DEFAULT '' COMMENT '模板描述',
+    `slots`        TEXT          NOT NULL COMMENT '条件槽JSON数组',
+    `sort_order`   INT           NOT NULL DEFAULT 0 COMMENT '排列顺序',
+    `is_built_in`  TINYINT(1)    NOT NULL DEFAULT 0 COMMENT '是否内置(1=是)',
+    `created_time` DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_time` DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_template_key` (`template_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='人群分层业务模板';

@@ -3,6 +3,7 @@ package io.growth.platform.profile.infrastructure.mq;
 import io.growth.platform.profile.api.dto.FieldMapping;
 import io.growth.platform.profile.api.enums.ExtractStrategy;
 import io.growth.platform.profile.domain.model.BehaviorEvent;
+import io.growth.platform.profile.domain.model.PropertyDefinition;
 import io.growth.platform.profile.domain.service.DateTimeParser;
 import io.growth.platform.profile.infrastructure.mq.extract.FieldExtractor;
 import io.growth.platform.profile.infrastructure.mq.extract.GroovyExtractor;
@@ -17,6 +18,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class EventMessageParser {
@@ -41,19 +44,25 @@ public class EventMessageParser {
     /**
      * Parse a raw JSON message into a BehaviorEvent using field mappings.
      */
-    public BehaviorEvent parse(String rawJson, String eventName, List<FieldMapping> fieldMappings) {
+    public BehaviorEvent parse(String rawJson, String eventName,
+                               List<FieldMapping> fieldMappings,
+                               List<PropertyDefinition> propertyDefinitions) {
         BehaviorEvent event = new BehaviorEvent();
         event.setEventId(UUID.randomUUID().toString());
         event.setEventName(eventName);
         event.setCreatedTime(LocalDateTime.now());
 
         Map<String, String> properties = new HashMap<>();
+        Map<String, PropertyDefinition> definitionMap = propertyDefinitions == null ? Map.of()
+                : propertyDefinitions.stream()
+                .filter(def -> def != null && def.getPropertyName() != null && !def.getPropertyName().isBlank())
+                .collect(Collectors.toMap(PropertyDefinition::getPropertyName, Function.identity(), (left, right) -> left));
 
         for (FieldMapping mapping : fieldMappings) {
             Object value = extractValue(rawJson, mapping);
-
-            if (value == null && mapping.getDefaultValue() != null) {
-                value = mapping.getDefaultValue();
+            PropertyDefinition definition = definitionMap.get(mapping.getTargetField());
+            if (value == null && definition != null && definition.getDefaultValue() != null) {
+                value = definition.getDefaultValue();
             }
 
             if (value == null) {
@@ -65,7 +74,8 @@ public class EventMessageParser {
             switch (targetField) {
                 case FIELD_USER_ID -> event.setUserId(value.toString());
                 case FIELD_EVENT_TIME -> {
-                    LocalDateTime eventTime = DateTimeParser.parse(value, mapping.getSourceType());
+                    String propertyType = definition != null ? definition.getPropertyType() : null;
+                    LocalDateTime eventTime = DateTimeParser.parse(value, propertyType);
                     event.setEventTime(eventTime);
                 }
                 default -> properties.put(targetField, value.toString());
@@ -84,14 +94,10 @@ public class EventMessageParser {
 
     /**
      * Extract a single field value for testing purposes.
-     * Returns the raw extracted value (or default).
+     * Returns the raw extracted value.
      */
     public Object extractSingleField(String rawJson, FieldMapping mapping) {
-        Object value = extractValue(rawJson, mapping);
-        if (value == null && mapping.getDefaultValue() != null) {
-            value = mapping.getDefaultValue();
-        }
-        return value;
+        return extractValue(rawJson, mapping);
     }
 
     private Object extractValue(String rawJson, FieldMapping mapping) {

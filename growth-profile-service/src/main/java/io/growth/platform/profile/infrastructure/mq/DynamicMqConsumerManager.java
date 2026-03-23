@@ -93,13 +93,17 @@ public class DynamicMqConsumerManager {
                 for (MessageExt msg : msgs) {
                     try {
                         String rawJson = new String(msg.getBody(), StandardCharsets.UTF_8);
-                        BehaviorEvent event = eventMessageParser.parse(rawJson, eventName, config.getFieldMappings());
-
-                        // Set eventType from definition
                         BehaviorEventDefinition def = eventDefinitionRepository.findByEventName(eventName).orElse(null);
-                        if (def != null) {
-                            event.setEventType(def.getEventType().name());
+                        if (def == null) {
+                            log.warn("Event definition not found for MQ event: {}", eventName);
+                            continue;
                         }
+                        BehaviorEvent event = eventMessageParser.parse(
+                                rawJson,
+                                eventName,
+                                config.getFieldMappings(),
+                                def.getProperties());
+                        event.setEventType(def.getEventType().name());
 
                         behaviorEventRepository.insert(event);
                         log.debug("Processed MQ event: eventName={}, userId={}", eventName, event.getUserId());
