@@ -10,6 +10,7 @@ import io.growth.platform.profile.api.dto.FieldMapping;
 import io.growth.platform.profile.api.dto.MqMappingTestRequest;
 import io.growth.platform.profile.api.dto.MqMappingTestResult;
 import io.growth.platform.profile.api.dto.MqSourceConfigDTO;
+import io.growth.platform.profile.api.dto.PropertyDefinitionDTO;
 import io.growth.platform.profile.api.enums.SourceType;
 import io.growth.platform.profile.converter.EventDefinitionDTOConverter;
 import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
@@ -19,13 +20,13 @@ import io.growth.platform.profile.infrastructure.mq.EventMessageParser;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class EventDefinitionService {
-
     private final EventDefinitionRepository eventDefinitionRepository;
     private final DynamicMqConsumerManager dynamicMqConsumerManager;
     private final EventMessageParser eventMessageParser;
@@ -52,6 +53,7 @@ public class EventDefinitionService {
         // Validate MQ config if sourceType is MQ
         if (request.getSourceType() == SourceType.MQ) {
             validateMqSourceConfig(request.getMqSourceConfig());
+            request.setProperties(mergeMqFieldMappingsIntoProperties(request.getProperties(), request.getMqSourceConfig()));
         }
 
         BehaviorEventDefinition domain = converter.toDomain(request);
@@ -75,6 +77,7 @@ public class EventDefinitionService {
         // Validate MQ config if updating to MQ type
         if (request.getSourceType() == SourceType.MQ) {
             validateMqSourceConfig(request.getMqSourceConfig());
+            request.setProperties(mergeMqFieldMappingsIntoProperties(request.getProperties(), request.getMqSourceConfig()));
         }
 
         converter.updateDomain(request, domain);
@@ -130,7 +133,7 @@ public class EventDefinitionService {
             try {
                 Object value = eventMessageParser.extractSingleField(request.getSampleMessage(), mapping);
                 extractedFields.put(mapping.getTargetField(),
-                        new MqMappingTestResult.ExtractedField(value, mapping.getSourceType()));
+                        new MqMappingTestResult.ExtractedField(value));
             } catch (Exception e) {
                 errors.add(new MqMappingTestResult.FieldError(mapping.getTargetField(), e.getMessage()));
             }
@@ -152,5 +155,45 @@ public class EventDefinitionService {
         if (config.getFieldMappings() == null || config.getFieldMappings().isEmpty()) {
             throw new BizException(CommonErrorCode.PARAM_ERROR, "MQ来源配置的字段映射不能为空");
         }
+    }
+
+    private List<PropertyDefinitionDTO> mergeMqFieldMappingsIntoProperties(List<PropertyDefinitionDTO> properties,
+                                                                           MqSourceConfigDTO mqSourceConfig) {
+        Map<String, PropertyDefinitionDTO> mergedProperties = new LinkedHashMap<>();
+
+        if (properties != null) {
+            for (PropertyDefinitionDTO property : properties) {
+                if (property == null || property.getPropertyName() == null || property.getPropertyName().isBlank()) {
+                    continue;
+                }
+                mergedProperties.put(property.getPropertyName(), property);
+            }
+        }
+
+        for (FieldMapping mapping : mqSourceConfig.getFieldMappings()) {
+            if (mapping == null || mapping.getTargetField() == null || mapping.getTargetField().isBlank()) {
+                continue;
+            }
+
+            PropertyDefinitionDTO property = mergedProperties.computeIfAbsent(
+                    mapping.getTargetField(),
+                    this::newPropertyDefinition);
+            if (property.getDisplayName() == null || property.getDisplayName().isBlank()) {
+                property.setDisplayName(mapping.getTargetField());
+            }
+        }
+
+        if (mergedProperties.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return new ArrayList<>(mergedProperties.values());
+    }
+
+    private PropertyDefinitionDTO newPropertyDefinition(String propertyName) {
+        PropertyDefinitionDTO property = new PropertyDefinitionDTO();
+        property.setPropertyName(propertyName);
+        property.setDisplayName(propertyName);
+        property.setRequired(false);
+        return property;
     }
 }

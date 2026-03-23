@@ -16,8 +16,4 @@ public class FieldMapping {
 
     @NotBlank
     private String expression;
-
-    private String sourceType;
-
-    private String defaultValue;
 }

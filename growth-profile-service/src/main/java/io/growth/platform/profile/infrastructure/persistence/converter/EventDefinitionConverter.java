@@ -2,6 +2,7 @@ package io.growth.platform.profile.infrastructure.persistence.converter;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.growth.platform.profile.api.enums.EventType;
 import io.growth.platform.profile.api.enums.SourceType;
@@ -21,7 +22,8 @@ import java.util.List;
 public interface EventDefinitionConverter {
 
     EventDefinitionConverter INSTANCE = Mappers.getMapper(EventDefinitionConverter.class);
-    ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Mapping(target = "eventType", source = "eventType", qualifiedByName = "eventTypeToString")
     @Mapping(target = "propertiesJson", source = "properties", qualifiedByName = "propertiesToJson")
