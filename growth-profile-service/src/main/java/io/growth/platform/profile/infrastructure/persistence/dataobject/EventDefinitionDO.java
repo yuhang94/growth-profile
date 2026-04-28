@@ -23,6 +23,7 @@ public class EventDefinitionDO {
     private String propertiesJson;
     private String sourceType;
     private String mqSourceConfigJson;
+    private String usageChannels;
     private Integer status;
     private String createdBy;
 

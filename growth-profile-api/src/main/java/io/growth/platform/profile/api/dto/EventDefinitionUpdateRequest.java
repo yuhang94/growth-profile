@@ -2,12 +2,14 @@ package io.growth.platform.profile.api.dto;
 
 import io.growth.platform.profile.api.enums.EventType;
 import io.growth.platform.profile.api.enums.SourceType;
+import io.growth.platform.profile.api.enums.UsageChannel;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Set;
 
 @Data
 public class EventDefinitionUpdateRequest {
@@ -26,4 +28,6 @@ public class EventDefinitionUpdateRequest {
 
     @Valid
     private MqSourceConfigDTO mqSourceConfig;
+
+    private Set<UsageChannel> usageChannels;
 }

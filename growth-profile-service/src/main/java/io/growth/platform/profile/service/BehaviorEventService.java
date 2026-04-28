@@ -12,6 +12,7 @@ import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
 import io.growth.platform.profile.domain.repository.BehaviorEventRepository;
 import io.growth.platform.profile.domain.repository.EventDefinitionRepository;
 import io.growth.platform.profile.domain.service.EventPropertyValidator;
+import io.growth.platform.profile.infrastructure.mq.BehaviorEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,17 +26,28 @@ public class BehaviorEventService {
     private final BehaviorEventRepository behaviorEventRepository;
     private final EventDefinitionRepository eventDefinitionRepository;
     private final EventPropertyValidator eventPropertyValidator;
+    private final BehaviorEventPublisher behaviorEventPublisher;
     private final BehaviorEventDTOConverter converter = BehaviorEventDTOConverter.INSTANCE;
 
     public BehaviorEventService(BehaviorEventRepository behaviorEventRepository,
                                 EventDefinitionRepository eventDefinitionRepository,
-                                EventPropertyValidator eventPropertyValidator) {
+                                EventPropertyValidator eventPropertyValidator,
+                                BehaviorEventPublisher behaviorEventPublisher) {
         this.behaviorEventRepository = behaviorEventRepository;
         this.eventDefinitionRepository = eventDefinitionRepository;
         this.eventPropertyValidator = eventPropertyValidator;
+        this.behaviorEventPublisher = behaviorEventPublisher;
     }
 
     public void report(BehaviorEventRequest request) {
+        reportInternal(request, "http-api", true);
+    }
+
+    public void reportFromSystem(BehaviorEventRequest request, String sourceName) {
+        reportInternal(request, sourceName, false);
+    }
+
+    private void reportInternal(BehaviorEventRequest request, String sourceName, boolean rejectMqType) {
         BehaviorEventDefinition definition = eventDefinitionRepository.findByEventName(request.getEventName())
                 .orElseThrow(() -> new BizException(CommonErrorCode.PARAM_ERROR, "事件定义不存在: " + request.getEventName()));
         if (!definition.isEnabled()) {
@@ -43,7 +55,7 @@ public class BehaviorEventService {
         }
 
         // MQ type events cannot be reported via HTTP
-        if (definition.getSourceType() == SourceType.MQ) {
+        if (rejectMqType && definition.getSourceType() == SourceType.MQ) {
             throw new BizException(CommonErrorCode.PARAM_ERROR, "MQ类型事件不允许通过HTTP上报: " + request.getEventName());
         }
 
@@ -60,10 +72,12 @@ public class BehaviorEventService {
         event.setCreatedTime(LocalDateTime.now());
 
         behaviorEventRepository.insert(event);
+        behaviorEventPublisher.publish(event, definition.getSourceType(), sourceName);
     }
 
     public void batchReport(BehaviorEventBatchRequest request) {
         List<BehaviorEvent> events = new ArrayList<>();
+        List<BehaviorEventDefinition> definitions = new ArrayList<>();
         for (BehaviorEventRequest item : request.getEvents()) {
             BehaviorEventDefinition definition = eventDefinitionRepository.findByEventName(item.getEventName())
                     .orElseThrow(() -> new BizException(CommonErrorCode.PARAM_ERROR, "事件定义不存在: " + item.getEventName()));
@@ -88,8 +102,12 @@ public class BehaviorEventService {
             event.setEventTime(item.getEventTime());
             event.setCreatedTime(LocalDateTime.now());
             events.add(event);
+            definitions.add(definition);
         }
         behaviorEventRepository.insertBatch(events);
+        for (int i = 0; i < events.size(); i++) {
+            behaviorEventPublisher.publish(events.get(i), definitions.get(i).getSourceType(), "http-api");
+        }
     }
 
     public List<BehaviorEventDTO> query(String userId, String eventName,

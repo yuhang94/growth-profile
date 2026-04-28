@@ -6,6 +6,7 @@ import io.growth.platform.profile.api.dto.EventDefinitionCreateRequest;
 import io.growth.platform.profile.api.dto.EventDefinitionDTO;
 import io.growth.platform.profile.api.dto.EventDefinitionUpdateRequest;
 import io.growth.platform.profile.api.enums.EventType;
+import io.growth.platform.profile.api.enums.UsageChannel;
 import io.growth.platform.profile.infrastructure.mq.DynamicMqConsumerManager;
 import io.growth.platform.profile.service.EventDefinitionService;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -45,12 +47,14 @@ class EventDefinitionControllerTest {
         dto.setEventName("page_view");
         dto.setDisplayName("页面浏览");
         dto.setEventType(EventType.PAGE_VIEW);
+        dto.setUsageChannels(Set.of(UsageChannel.PROFILE));
         when(eventDefinitionService.create(any())).thenReturn(dto);
 
         EventDefinitionCreateRequest request = new EventDefinitionCreateRequest();
         request.setEventName("page_view");
         request.setEventType(EventType.PAGE_VIEW);
         request.setDisplayName("页面浏览");
+        request.setUsageChannels(Set.of(UsageChannel.PROFILE));
 
         mockMvc.perform(post("/api/v1/profile/event-definitions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -95,9 +99,24 @@ class EventDefinitionControllerTest {
     void page_success() throws Exception {
         EventDefinitionDTO dto = new EventDefinitionDTO();
         dto.setEventName("page_view");
-        when(eventDefinitionService.page(null, 1, 20)).thenReturn(PageResult.of(1L, 1, 20, List.of(dto)));
+        when(eventDefinitionService.page(isNull(), isNull(), eq(1), eq(20)))
+                .thenReturn(PageResult.of(1L, 1, 20, List.of(dto)));
 
         mockMvc.perform(get("/api/v1/profile/event-definitions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1));
+    }
+
+    @Test
+    void page_withUsageChannel() throws Exception {
+        EventDefinitionDTO dto = new EventDefinitionDTO();
+        dto.setEventName("page_view");
+        dto.setUsageChannels(Set.of(UsageChannel.CAMPAIGN));
+        when(eventDefinitionService.page(isNull(), eq(UsageChannel.CAMPAIGN), eq(1), eq(20)))
+                .thenReturn(PageResult.of(1L, 1, 20, List.of(dto)));
+
+        mockMvc.perform(get("/api/v1/profile/event-definitions")
+                        .param("usageChannel", "CAMPAIGN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1));
     }

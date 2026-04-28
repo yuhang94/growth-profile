@@ -1,6 +1,7 @@
 package io.growth.platform.profile.infrastructure.persistence.converter;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.growth.platform.profile.domain.model.Segment;
 import io.growth.platform.profile.domain.model.SegmentCondition;
@@ -14,7 +15,8 @@ import org.mapstruct.factory.Mappers;
 public interface SegmentConverter {
 
     SegmentConverter INSTANCE = Mappers.getMapper(SegmentConverter.class);
-    ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Mapping(target = "conditionJson", source = "rootCondition", qualifiedByName = "conditionToJson")
     SegmentDO toDataObject(Segment domain);

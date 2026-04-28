@@ -28,6 +28,14 @@ public class SegmentSqlBuilder {
                 ") ORDER BY user_id LIMIT ? OFFSET ?";
     }
 
+    public String buildMatchSql(SegmentCondition root, String userId) {
+        params.add(userId);
+        String whereClause = buildCondition(root);
+        return "SELECT COUNT(DISTINCT user_id) FROM " + TABLE +
+                " WHERE user_id = ? AND user_id IN (" +
+                "SELECT user_id FROM " + TABLE + " WHERE " + whereClause + ")";
+    }
+
     public Object[] getParams() {
         return params.toArray();
     }

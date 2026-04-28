@@ -27,11 +27,19 @@ class DynamicMqConsumerManagerTest {
     @Mock
     private EventMessageParser eventMessageParser;
 
+    @Mock
+    private BehaviorEventPublisher behaviorEventPublisher;
+
     private DynamicMqConsumerManager manager;
 
     @BeforeEach
     void setUp() {
-        manager = new DynamicMqConsumerManager(eventDefinitionRepository, behaviorEventRepository, eventMessageParser);
+        manager = new DynamicMqConsumerManager(
+                eventDefinitionRepository,
+                behaviorEventRepository,
+                eventMessageParser,
+                behaviorEventPublisher
+        );
     }
 
     @Test

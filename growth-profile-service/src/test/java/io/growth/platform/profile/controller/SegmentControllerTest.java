@@ -12,6 +12,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -124,5 +125,45 @@ class SegmentControllerTest {
         mockMvc.perform(get("/api/v1/profile/segments/1/users"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(2));
+    }
+
+    @Test
+    void match_success() throws Exception {
+        when(segmentService.match(any())).thenReturn(
+                new SegmentMatchResult(1L, "user001", true, 0L, "matched_by_realtime_query"));
+
+        SegmentMatchRequest request = new SegmentMatchRequest();
+        request.setSegmentId(1L);
+        request.setUserId("user001");
+        request.setContextTime(LocalDateTime.now());
+
+        mockMvc.perform(post("/api/v1/profile/segments/match")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.segmentId").value(1))
+                .andExpect(jsonPath("$.data.userId").value("user001"))
+                .andExpect(jsonPath("$.data.matched").value(true));
+    }
+
+    @Test
+    void batchMatch_success() throws Exception {
+        SegmentBatchMatchResult result = new SegmentBatchMatchResult(1L, List.of(
+                new SegmentMatchResult(1L, "user001", true, 0L, "matched_by_realtime_query"),
+                new SegmentMatchResult(1L, "user002", false, 0L, "not_matched_by_realtime_query")
+        ));
+        when(segmentService.batchMatch(any())).thenReturn(result);
+
+        SegmentBatchMatchRequest request = new SegmentBatchMatchRequest();
+        request.setSegmentId(1L);
+        request.setUserIds(List.of("user001", "user002"));
+        request.setContextTime(LocalDateTime.now());
+
+        mockMvc.perform(post("/api/v1/profile/segments/batch-match")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.segmentId").value(1))
+                .andExpect(jsonPath("$.data.results.length()").value(2));
     }
 }

@@ -32,4 +32,12 @@ public class ClickHouseSegmentQueryRepository implements SegmentQueryRepository 
         String sql = builder.buildQuerySql(rootCondition, offset, pageSize);
         return clickHouseJdbcTemplate.queryForList(sql, String.class, builder.getParams());
     }
+
+    @Override
+    public boolean matchesUser(SegmentCondition rootCondition, String userId) {
+        SegmentSqlBuilder builder = new SegmentSqlBuilder();
+        String sql = builder.buildMatchSql(rootCondition, userId);
+        Long count = clickHouseJdbcTemplate.queryForObject(sql, Long.class, builder.getParams());
+        return count != null && count > 0;
+    }
 }

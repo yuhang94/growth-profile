@@ -5,6 +5,7 @@ import io.growth.platform.profile.api.dto.FieldMapping;
 import io.growth.platform.profile.api.enums.EventType;
 import io.growth.platform.profile.api.enums.ExtractStrategy;
 import io.growth.platform.profile.api.enums.SourceType;
+import io.growth.platform.profile.api.enums.UsageChannel;
 import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
 import io.growth.platform.profile.domain.model.MqSourceConfig;
 import io.growth.platform.profile.domain.model.PropertyDefinition;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -149,6 +151,33 @@ class EventDefinitionRepositoryImplIT extends BaseMyBatisTest {
     }
 
     @Test
+    void findPage_byUsageChannel() {
+        BehaviorEventDefinition profileEvent = newEventDefinition("profile_event", EventType.CUSTOM, "画像事件");
+        profileEvent.setUsageChannels(EnumSet.of(UsageChannel.PROFILE));
+        repository.insert(profileEvent);
+
+        BehaviorEventDefinition campaignEvent = newEventDefinition("campaign_event", EventType.CUSTOM, "营销事件");
+        campaignEvent.setUsageChannels(EnumSet.of(UsageChannel.CAMPAIGN));
+        repository.insert(campaignEvent);
+
+        BehaviorEventDefinition bothEvent = newEventDefinition("both_event", EventType.CUSTOM, "双渠道事件");
+        bothEvent.setUsageChannels(EnumSet.of(UsageChannel.PROFILE, UsageChannel.CAMPAIGN));
+        repository.insert(bothEvent);
+
+        List<BehaviorEventDefinition> profileResults = repository.findPage(null, UsageChannel.PROFILE, 1, 10);
+        assertEquals(2, profileResults.size());
+
+        long profileCount = repository.count(null, UsageChannel.PROFILE);
+        assertEquals(2, profileCount);
+
+        List<BehaviorEventDefinition> campaignResults = repository.findPage(null, UsageChannel.CAMPAIGN, 1, 10);
+        assertEquals(2, campaignResults.size());
+
+        List<BehaviorEventDefinition> allResults = repository.findPage(null, null, 1, 10);
+        assertEquals(3, allResults.size());
+    }
+
+    @Test
     void findAllBySourceTypeAndStatus() {
         BehaviorEventDefinition sdkDef = newEventDefinition("sdk_event", EventType.CUSTOM, "SDK事件");
         repository.insert(sdkDef);
@@ -186,6 +215,7 @@ class EventDefinitionRepositoryImplIT extends BaseMyBatisTest {
         def.setEventType(eventType);
         def.setDisplayName(displayName);
         def.setSourceType(SourceType.SDK);
+        def.setUsageChannels(EnumSet.of(UsageChannel.PROFILE));
         def.setStatus(1);
         return def;
     }

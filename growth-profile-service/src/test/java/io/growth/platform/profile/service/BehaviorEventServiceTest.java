@@ -12,6 +12,7 @@ import io.growth.platform.profile.domain.model.PropertyDefinition;
 import io.growth.platform.profile.domain.repository.BehaviorEventRepository;
 import io.growth.platform.profile.domain.repository.EventDefinitionRepository;
 import io.growth.platform.profile.domain.service.EventPropertyValidator;
+import io.growth.platform.profile.infrastructure.mq.BehaviorEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,9 @@ class BehaviorEventServiceTest {
 
     @Mock
     private EventPropertyValidator eventPropertyValidator;
+
+    @Mock
+    private BehaviorEventPublisher behaviorEventPublisher;
 
     @InjectMocks
     private BehaviorEventService behaviorEventService;
@@ -69,6 +73,7 @@ class BehaviorEventServiceTest {
 
         verify(behaviorEventRepository).insert(any());
         verify(eventPropertyValidator).validate(any(), any());
+        verify(behaviorEventPublisher).publish(any(), eq(SourceType.SDK), eq("http-api"));
     }
 
     @Test
@@ -159,6 +164,27 @@ class BehaviorEventServiceTest {
         behaviorEventService.batchReport(request);
 
         verify(behaviorEventRepository).insertBatch(argThat(list -> list.size() == 2));
+        verify(behaviorEventPublisher, times(2)).publish(any(), eq(SourceType.SDK), eq("http-api"));
+    }
+
+    @Test
+    void reportFromSystem_allowsMqTypeEvent() {
+        BehaviorEventDefinition mqDef = new BehaviorEventDefinition();
+        mqDef.setEventName("mq_event");
+        mqDef.setEventType(EventType.CUSTOM);
+        mqDef.setSourceType(SourceType.MQ);
+        mqDef.setStatus(1);
+        when(eventDefinitionRepository.findByEventName("mq_event")).thenReturn(Optional.of(mqDef));
+
+        BehaviorEventRequest request = new BehaviorEventRequest();
+        request.setUserId("user001");
+        request.setEventName("mq_event");
+        request.setEventTime(LocalDateTime.now());
+
+        behaviorEventService.reportFromSystem(request, "profile-behavior-event");
+
+        verify(behaviorEventRepository).insert(any());
+        verify(behaviorEventPublisher).publish(any(), eq(SourceType.MQ), eq("profile-behavior-event"));
     }
 
     @Test

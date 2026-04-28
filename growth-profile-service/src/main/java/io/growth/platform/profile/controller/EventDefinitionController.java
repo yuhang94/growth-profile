@@ -7,6 +7,7 @@ import io.growth.platform.profile.api.dto.EventDefinitionDTO;
 import io.growth.platform.profile.api.dto.EventDefinitionUpdateRequest;
 import io.growth.platform.profile.api.dto.MqMappingTestRequest;
 import io.growth.platform.profile.api.dto.MqMappingTestResult;
+import io.growth.platform.profile.api.enums.UsageChannel;
 import io.growth.platform.profile.infrastructure.mq.DynamicMqConsumerManager;
 import io.growth.platform.profile.service.EventDefinitionService;
 import jakarta.validation.Valid;
@@ -47,9 +48,10 @@ public class EventDefinitionController {
     @GetMapping
     public Result<PageResult<EventDefinitionDTO>> page(
             @RequestParam(required = false) String eventType,
+            @RequestParam(required = false) UsageChannel usageChannel,
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "20") int pageSize) {
-        return Result.success(eventDefinitionService.page(eventType, pageNum, pageSize));
+        return Result.success(eventDefinitionService.page(eventType, usageChannel, pageNum, pageSize));
     }
 
     @PutMapping("/{eventName}/status")

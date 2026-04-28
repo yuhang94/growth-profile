@@ -11,6 +11,7 @@ import io.growth.platform.profile.api.dto.MqMappingTestRequest;
 import io.growth.platform.profile.api.dto.MqMappingTestResult;
 import io.growth.platform.profile.api.dto.MqSourceConfigDTO;
 import io.growth.platform.profile.api.enums.SourceType;
+import io.growth.platform.profile.api.enums.UsageChannel;
 import io.growth.platform.profile.converter.EventDefinitionDTOConverter;
 import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
 import io.growth.platform.profile.domain.repository.EventDefinitionRepository;
@@ -102,6 +103,13 @@ public class EventDefinitionService {
     public PageResult<EventDefinitionDTO> page(String eventType, int pageNum, int pageSize) {
         long total = eventDefinitionRepository.countByEventType(eventType);
         List<BehaviorEventDefinition> list = eventDefinitionRepository.findByEventType(eventType, pageNum, pageSize);
+        List<EventDefinitionDTO> dtoList = list.stream().map(converter::toDTO).toList();
+        return PageResult.of(total, pageNum, pageSize, dtoList);
+    }
+
+    public PageResult<EventDefinitionDTO> page(String eventType, UsageChannel usageChannel, int pageNum, int pageSize) {
+        long total = eventDefinitionRepository.count(eventType, usageChannel);
+        List<BehaviorEventDefinition> list = eventDefinitionRepository.findPage(eventType, usageChannel, pageNum, pageSize);
         List<EventDefinitionDTO> dtoList = list.stream().map(converter::toDTO).toList();
         return PageResult.of(total, pageNum, pageSize, dtoList);
     }

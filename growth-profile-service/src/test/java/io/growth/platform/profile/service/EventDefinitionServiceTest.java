@@ -10,6 +10,7 @@ import io.growth.platform.profile.api.dto.MqSourceConfigDTO;
 import io.growth.platform.profile.api.enums.EventType;
 import io.growth.platform.profile.api.enums.ExtractStrategy;
 import io.growth.platform.profile.api.enums.SourceType;
+import io.growth.platform.profile.api.enums.UsageChannel;
 import io.growth.platform.profile.domain.model.BehaviorEventDefinition;
 import io.growth.platform.profile.domain.model.MqSourceConfig;
 import io.growth.platform.profile.domain.repository.EventDefinitionRepository;
@@ -22,8 +23,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -54,6 +57,7 @@ class EventDefinitionServiceTest {
         sampleDomain.setEventType(EventType.PAGE_VIEW);
         sampleDomain.setDisplayName("页面浏览");
         sampleDomain.setSourceType(SourceType.SDK);
+        sampleDomain.setUsageChannels(EnumSet.of(UsageChannel.PROFILE));
         sampleDomain.setStatus(1);
     }
 
@@ -70,6 +74,7 @@ class EventDefinitionServiceTest {
         request.setEventName("page_view");
         request.setEventType(EventType.PAGE_VIEW);
         request.setDisplayName("页面浏览");
+        request.setUsageChannels(Set.of(UsageChannel.PROFILE));
 
         EventDefinitionDTO result = eventDefinitionService.create(request);
 
@@ -95,6 +100,7 @@ class EventDefinitionServiceTest {
         request.setDisplayName("MQ事件");
         request.setSourceType(SourceType.MQ);
         request.setMqSourceConfig(newMqConfig());
+        request.setUsageChannels(Set.of(UsageChannel.PROFILE));
 
         eventDefinitionService.create(request);
 
@@ -110,6 +116,7 @@ class EventDefinitionServiceTest {
         request.setEventType(EventType.CUSTOM);
         request.setDisplayName("MQ事件");
         request.setSourceType(SourceType.MQ);
+        request.setUsageChannels(Set.of(UsageChannel.PROFILE));
 
         assertThrows(BizException.class, () -> eventDefinitionService.create(request));
     }
@@ -122,6 +129,7 @@ class EventDefinitionServiceTest {
         request.setEventName("page_view");
         request.setEventType(EventType.PAGE_VIEW);
         request.setDisplayName("页面浏览");
+        request.setUsageChannels(Set.of(UsageChannel.PROFILE));
 
         assertThrows(BizException.class, () -> eventDefinitionService.create(request));
     }
@@ -169,10 +177,21 @@ class EventDefinitionServiceTest {
 
     @Test
     void page_success() {
-        when(eventDefinitionRepository.countByEventType(null)).thenReturn(1L);
-        when(eventDefinitionRepository.findByEventType(null, 1, 20)).thenReturn(List.of(sampleDomain));
+        when(eventDefinitionRepository.count(null, null)).thenReturn(1L);
+        when(eventDefinitionRepository.findPage(null, null, 1, 20)).thenReturn(List.of(sampleDomain));
 
-        PageResult<EventDefinitionDTO> result = eventDefinitionService.page(null, 1, 20);
+        PageResult<EventDefinitionDTO> result = eventDefinitionService.page(null, null, 1, 20);
+
+        assertEquals(1, result.getTotal());
+        assertEquals(1, result.getList().size());
+    }
+
+    @Test
+    void page_withUsageChannel() {
+        when(eventDefinitionRepository.count(null, UsageChannel.CAMPAIGN)).thenReturn(1L);
+        when(eventDefinitionRepository.findPage(null, UsageChannel.CAMPAIGN, 1, 20)).thenReturn(List.of(sampleDomain));
+
+        PageResult<EventDefinitionDTO> result = eventDefinitionService.page(null, UsageChannel.CAMPAIGN, 1, 20);
 
         assertEquals(1, result.getTotal());
         assertEquals(1, result.getList().size());

@@ -9,4 +9,6 @@ public interface SegmentQueryRepository {
     long countUsers(SegmentCondition rootCondition);
 
     List<String> queryUsers(SegmentCondition rootCondition, int pageNum, int pageSize);
+
+    boolean matchesUser(SegmentCondition rootCondition, String userId);
 }

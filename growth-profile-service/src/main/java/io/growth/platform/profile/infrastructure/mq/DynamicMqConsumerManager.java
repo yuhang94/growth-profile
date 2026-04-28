@@ -33,16 +33,19 @@ public class DynamicMqConsumerManager {
     private final EventDefinitionRepository eventDefinitionRepository;
     private final BehaviorEventRepository behaviorEventRepository;
     private final EventMessageParser eventMessageParser;
+    private final BehaviorEventPublisher behaviorEventPublisher;
 
     @Value("${rocketmq.name-server}")
     private String nameServer;
 
     public DynamicMqConsumerManager(EventDefinitionRepository eventDefinitionRepository,
                                     BehaviorEventRepository behaviorEventRepository,
-                                    EventMessageParser eventMessageParser) {
+                                    EventMessageParser eventMessageParser,
+                                    BehaviorEventPublisher behaviorEventPublisher) {
         this.eventDefinitionRepository = eventDefinitionRepository;
         this.behaviorEventRepository = behaviorEventRepository;
         this.eventMessageParser = eventMessageParser;
+        this.behaviorEventPublisher = behaviorEventPublisher;
     }
 
     @PostConstruct
@@ -102,6 +105,9 @@ public class DynamicMqConsumerManager {
                         }
 
                         behaviorEventRepository.insert(event);
+                        if (def != null) {
+                            behaviorEventPublisher.publish(event, def.getSourceType(), config.getTopic());
+                        }
                         log.debug("Processed MQ event: eventName={}, userId={}", eventName, event.getUserId());
                     } catch (Exception e) {
                         log.error("Failed to process MQ message for event: {}", eventName, e);

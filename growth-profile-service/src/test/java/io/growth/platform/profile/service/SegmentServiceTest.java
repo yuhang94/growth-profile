@@ -16,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -181,5 +182,40 @@ class SegmentServiceTest {
 
         assertEquals(2, result.getTotal());
         assertEquals(List.of("user001", "user002"), result.getList());
+    }
+
+    @Test
+    void match_success() {
+        when(segmentRepository.findById(1L)).thenReturn(Optional.of(sampleSegment));
+        when(segmentQueryRepository.matchesUser(any(), eq("user001"))).thenReturn(true);
+
+        SegmentMatchRequest request = new SegmentMatchRequest();
+        request.setSegmentId(1L);
+        request.setUserId("user001");
+        request.setContextTime(LocalDateTime.now());
+
+        SegmentMatchResult result = segmentService.match(request);
+
+        assertTrue(result.getMatched());
+        assertEquals(1L, result.getSegmentId());
+        assertEquals("matched_by_realtime_query", result.getReason());
+    }
+
+    @Test
+    void batchMatch_success() {
+        when(segmentRepository.findById(1L)).thenReturn(Optional.of(sampleSegment));
+        when(segmentQueryRepository.matchesUser(any(), eq("user001"))).thenReturn(true);
+        when(segmentQueryRepository.matchesUser(any(), eq("user002"))).thenReturn(false);
+
+        SegmentBatchMatchRequest request = new SegmentBatchMatchRequest();
+        request.setSegmentId(1L);
+        request.setUserIds(List.of("user001", "user002"));
+        request.setContextTime(LocalDateTime.now());
+
+        SegmentBatchMatchResult result = segmentService.batchMatch(request);
+
+        assertEquals(2, result.getResults().size());
+        assertTrue(result.getResults().get(0).getMatched());
+        assertFalse(result.getResults().get(1).getMatched());
     }
 }

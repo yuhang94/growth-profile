@@ -63,4 +63,14 @@ public class SegmentController {
             @RequestParam(defaultValue = "20") int pageSize) {
         return Result.success(segmentService.getSegmentUsers(id, pageNum, pageSize));
     }
+
+    @PostMapping("/match")
+    public Result<SegmentMatchResult> match(@Valid @RequestBody SegmentMatchRequest request) {
+        return Result.success(segmentService.match(request));
+    }
+
+    @PostMapping("/batch-match")
+    public Result<SegmentBatchMatchResult> batchMatch(@Valid @RequestBody SegmentBatchMatchRequest request) {
+        return Result.success(segmentService.batchMatch(request));
+    }
 }

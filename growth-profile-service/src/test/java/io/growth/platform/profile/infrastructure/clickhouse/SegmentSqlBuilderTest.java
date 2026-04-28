@@ -155,6 +155,21 @@ class SegmentSqlBuilderTest {
         assertNotNull(builder.getParams());
     }
 
+    @Test
+    void buildMatchSql_singleLeaf() {
+        SegmentCondition leaf = leaf("age", CompareOperator.GT, List.of("25"));
+
+        SegmentSqlBuilder builder = new SegmentSqlBuilder();
+        String sql = builder.buildMatchSql(leaf, "user001");
+        Object[] params = builder.getParams();
+
+        assertTrue(sql.contains("COUNT(DISTINCT user_id)"));
+        assertTrue(sql.contains("user_id = ?"));
+        assertEquals("user001", params[0]);
+        assertEquals("age", params[1]);
+        assertEquals(25.0, params[2]);
+    }
+
     private SegmentCondition leaf(String tagKey, CompareOperator op, List<String> values) {
         SegmentCondition c = new SegmentCondition();
         c.setTagKey(tagKey);

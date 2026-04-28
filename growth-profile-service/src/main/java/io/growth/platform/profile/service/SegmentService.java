@@ -12,6 +12,7 @@ import io.growth.platform.profile.domain.repository.SegmentRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -83,5 +84,35 @@ public class SegmentService {
         long total = segmentQueryRepository.countUsers(domain.getRootCondition());
         List<String> users = segmentQueryRepository.queryUsers(domain.getRootCondition(), pageNum, pageSize);
         return PageResult.of(total, pageNum, pageSize, users);
+    }
+
+    public SegmentMatchResult match(SegmentMatchRequest request) {
+        Segment domain = segmentRepository.findById(request.getSegmentId())
+                .orElseThrow(() -> new BizException(CommonErrorCode.NOT_FOUND, "分群不存在: " + request.getSegmentId()));
+        boolean matched = segmentQueryRepository.matchesUser(domain.getRootCondition(), request.getUserId());
+        return new SegmentMatchResult(
+                domain.getId(),
+                request.getUserId(),
+                matched,
+                0L,
+                matched ? "matched_by_realtime_query" : "not_matched_by_realtime_query"
+        );
+    }
+
+    public SegmentBatchMatchResult batchMatch(SegmentBatchMatchRequest request) {
+        Segment domain = segmentRepository.findById(request.getSegmentId())
+                .orElseThrow(() -> new BizException(CommonErrorCode.NOT_FOUND, "分群不存在: " + request.getSegmentId()));
+        List<SegmentMatchResult> results = new ArrayList<>();
+        for (String userId : request.getUserIds()) {
+            boolean matched = segmentQueryRepository.matchesUser(domain.getRootCondition(), userId);
+            results.add(new SegmentMatchResult(
+                    domain.getId(),
+                    userId,
+                    matched,
+                    0L,
+                    matched ? "matched_by_realtime_query" : "not_matched_by_realtime_query"
+            ));
+        }
+        return new SegmentBatchMatchResult(domain.getId(), results);
     }
 }

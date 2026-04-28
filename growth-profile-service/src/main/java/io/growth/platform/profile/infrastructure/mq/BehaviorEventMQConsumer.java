@@ -34,7 +34,7 @@ public class BehaviorEventMQConsumer implements RocketMQListener<BehaviorEventMQ
             request.setEventName(message.getEventName());
             request.setProperties(message.getProperties());
             request.setEventTime(message.getEventTime());
-            behaviorEventService.report(request);
+            behaviorEventService.reportFromSystem(request, RocketMQConfig.TOPIC_BEHAVIOR_EVENT);
         } catch (Exception e) {
             log.error("Failed to process behavior event: userId={}, eventName={}",
                     message.getUserId(), message.getEventName(), e);
